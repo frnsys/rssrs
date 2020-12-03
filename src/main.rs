@@ -134,6 +134,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         // println!("{:?}", db.get_channel_items(&feed_url));
         db.get_channel_items(&feed_url).ok()
     }).flatten().collect();
+    items.sort_by_cached_key(|i| match i.published_at {
+        Some(ts) => -ts,
+        None => 0
+    });
 
     table.set_items(items.iter().map(|i| {
         let pub_date = match i.published_at {
