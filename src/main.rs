@@ -110,6 +110,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // terminal.hide_cursor()?;
 
     let mut table = StatefulTable::new();
+    let mut fullscreen_preview = false;
 
     let mut input_mode = InputMode::Normal;
 
@@ -148,81 +149,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut search_query = String::new();
     loop {
         terminal.draw(|f| {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                     Constraint::Min(1),
-                     Constraint::Percentage(50),
-                     Constraint::Length(1),
-                ].as_ref())
-                .split(f.size());
-
-            let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-            let normal_style = Style::default().bg(Color::White);
-            let header_cells = ["Title", "Published"]
-                .iter()
-                .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
-            let header = Row::new(header_cells)
-                .style(normal_style)
-                .height(1);
-
-            let reg = match input_mode {
-                InputMode::Normal => format!(r"({})", &search_query),
-                InputMode::Search => format!(r"({})", &search_input)
+            let (msg, style) = match input_mode {
+                InputMode::Normal => (
+                    vec![
+                        Span::raw("Press "),
+                        Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(" to exit, "),
+                        Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(" to start editing."),
+                    ],
+                    Style::default().add_modifier(Modifier::RAPID_BLINK),
+                ),
+                InputMode::Search => (
+                    vec![
+                        Span::raw("/"),
+                        Span::styled(&search_input, Style::default().add_modifier(Modifier::BOLD)),
+                    ],
+                    Style::default(),
+                ),
             };
-            let separator = RegexBuilder::new(&reg).case_insensitive(true).build().expect("Invalid regex");
+            let mut text = Text::from(Spans::from(msg));
+            text.patch_style(style);
+            let status_bar = Paragraph::new(text).style(Style::default().bg(Color::DarkGray));
 
-            let rows = table.items.iter().enumerate().map(|(i, item)| {
-                let height = item
-                    .iter()
-                    .map(|content| content.chars().filter(|c| *c == '\n').count())
-                    .max()
-                    .unwrap_or(1)
-                    + 1;
-                let cells = item.iter().map(|c| {
-                    let parts = split_keep(&separator, c);
-                    let spans: Vec<Span> = parts.iter().map(|(text, is_match)| {
-                        if *is_match {
-                            Span::styled(*text, Style::default().fg(Color::Yellow))
-                        } else {
-                            Span::raw(*text)
-                        }
-                    }).collect();
-                    Cell::from(Spans::from(spans))
-
-                    // if search_results.contains(&i) {
-                    //     let parts = split_keep(&separator, c);
-                    //     let spans: Vec<Span> = parts.iter().map(|(text, is_match)| {
-                    //         if *is_match {
-                    //             Span::styled(*text, Style::default().fg(Color::Yellow))
-                    //         } else {
-                    //             Span::raw(*text)
-                    //         }
-                    //     }).collect();
-                    //     Cell::from(Spans::from(spans))
-                    // } else {
-                    //     Cell::from(Spans::from(c.clone()))
-                    // }
-                });
-                let style = if items[i].read {
-                    Style::default().fg(Color::Rgb(100,100,100))
-                } else {
-                    Style::default()
-                };
-                Row::new(cells).height(height as u16).style(style)
-            });
-            let t = Table::new(rows)
-                .header(header)
-                .block(Block::default().borders(Borders::BOTTOM))
-                .highlight_style(selected_style)
-                .widths(&[
-                    Constraint::Percentage(50),
-                    Constraint::Length(30),
-                    Constraint::Max(10),
-                ]);
-            f.render_stateful_widget(t, chunks[0], &mut table.state);
-
-            match table.state.selected() {
+            let preview = match table.state.selected() {
                 Some(i) =>  {
                     // let size = f.size();
                     // let s = "Veeeeeeeeeeeeeeeery    loooooooooooooooooong   striiiiiiiiiiiiiiiiiiiiiiiiiing.   ";
@@ -254,67 +204,132 @@ fn main() -> Result<(), Box<dyn Error>> {
                         text.push(Spans::from(line));
                     }
 
-                    let paragraph = Paragraph::new(text.clone())
+                    Paragraph::new(text.clone())
                         .style(Style::default())//.bg(Color::White).fg(Color::Black))
                         .block(Block::default())
                             // .style(Style::default().bg(Color::White).fg(Color::Black)))
                         .alignment(Alignment::Left)
                         .wrap(Wrap { trim: true })
-                        .scroll((scroll, 0));
-                    f.render_widget(paragraph, chunks[1]);
+                        .scroll((scroll, 0))
                 }
-                None => {}
-            }
-
-            let (msg, style) = match input_mode {
-                InputMode::Normal => (
-                    vec![
-                        Span::raw("Press "),
-                        Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to exit, "),
-                        Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to start editing."),
-                    ],
-                    Style::default().add_modifier(Modifier::RAPID_BLINK),
-                ),
-                InputMode::Search => (
-                    vec![
-                        Span::raw("/"),
-                        Span::styled(&search_input, Style::default().add_modifier(Modifier::BOLD)),
-                    ],
-                    Style::default(),
-                ),
+                None => Paragraph::new("No item selected.")
             };
-            let mut text = Text::from(Spans::from(msg));
-            text.patch_style(style);
-            let help_message = Paragraph::new(text).style(Style::default().bg(Color::DarkGray));
-            f.render_widget(help_message, chunks[2]);
 
-            // let items: Vec<ListItem> = app
-            //     .items
-            //     .items
-            //     .iter()
-            //     .map(|i| {
-            //         let mut lines = vec![
-            //         // let mut lines = vec![Spans::from(i.0)];
-            //         // for _ in 0..i.1 {
-            //         //     lines.push(Spans::from(Span::styled(
-            //         //         "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            //         //         Style::default().add_modifier(Modifier::ITALIC),
-            //         //     )));
-            //         // }
-            //         ListItem::new(lines).style(Style::default().fg(Color::Black).bg(Color::White))
-            //     })
-            //     .collect();
-            // let items = List::new(items)
-            //     .block(Block::default())
-            //     .highlight_style(
-            //         Style::default()
-            //             .bg(Color::LightGreen)
-            //             .add_modifier(Modifier::BOLD),
-            //     )
-            //     .highlight_symbol(">> ");
-            // f.render_stateful_widget(items, chunks[0], &mut app.items.state);
+            if (fullscreen_preview) {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                         Constraint::Min(1),
+                         Constraint::Length(1),
+                    ].as_ref())
+                    .split(f.size());
+
+                f.render_widget(preview, chunks[0]);
+                f.render_widget(status_bar, chunks[1]);
+            } else {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                         Constraint::Min(1),
+                         Constraint::Percentage(50),
+                         Constraint::Length(1),
+                    ].as_ref())
+                    .split(f.size());
+
+                let selected_style = Style::default().add_modifier(Modifier::REVERSED);
+                let normal_style = Style::default().bg(Color::White);
+                let header_cells = ["Title", "Published"]
+                    .iter()
+                    .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
+                let header = Row::new(header_cells)
+                    .style(normal_style)
+                    .height(1);
+
+                let reg = match input_mode {
+                    InputMode::Normal => format!(r"({})", &search_query),
+                    InputMode::Search => format!(r"({})", &search_input)
+                };
+                let separator = RegexBuilder::new(&reg).case_insensitive(true).build().expect("Invalid regex");
+
+                let rows = table.items.iter().enumerate().map(|(i, item)| {
+                    let height = item
+                        .iter()
+                        .map(|content| content.chars().filter(|c| *c == '\n').count())
+                        .max()
+                        .unwrap_or(1)
+                        + 1;
+                    let cells = item.iter().map(|c| {
+                        let parts = split_keep(&separator, c);
+                        let spans: Vec<Span> = parts.iter().map(|(text, is_match)| {
+                            if *is_match {
+                                Span::styled(*text, Style::default().fg(Color::Yellow))
+                            } else {
+                                Span::raw(*text)
+                            }
+                        }).collect();
+                        Cell::from(Spans::from(spans))
+
+                        // if search_results.contains(&i) {
+                        //     let parts = split_keep(&separator, c);
+                        //     let spans: Vec<Span> = parts.iter().map(|(text, is_match)| {
+                        //         if *is_match {
+                        //             Span::styled(*text, Style::default().fg(Color::Yellow))
+                        //         } else {
+                        //             Span::raw(*text)
+                        //         }
+                        //     }).collect();
+                        //     Cell::from(Spans::from(spans))
+                        // } else {
+                        //     Cell::from(Spans::from(c.clone()))
+                        // }
+                    });
+                    let style = if items[i].read {
+                        Style::default().fg(Color::Rgb(100,100,100))
+                    } else {
+                        Style::default()
+                    };
+                    Row::new(cells).height(height as u16).style(style)
+                });
+                let t = Table::new(rows)
+                    .header(header)
+                    .block(Block::default().borders(Borders::BOTTOM))
+                    .highlight_style(selected_style)
+                    .widths(&[
+                        Constraint::Percentage(50),
+                        Constraint::Length(30),
+                        Constraint::Max(10),
+                    ]);
+                f.render_stateful_widget(t, chunks[0], &mut table.state);
+
+                f.render_widget(preview, chunks[1]);
+                f.render_widget(status_bar, chunks[2]);
+
+                // let items: Vec<ListItem> = app
+                //     .items
+                //     .items
+                //     .iter()
+                //     .map(|i| {
+                //         let mut lines = vec![
+                //         // let mut lines = vec![Spans::from(i.0)];
+                //         // for _ in 0..i.1 {
+                //         //     lines.push(Spans::from(Span::styled(
+                //         //         "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                //         //         Style::default().add_modifier(Modifier::ITALIC),
+                //         //     )));
+                //         // }
+                //         ListItem::new(lines).style(Style::default().fg(Color::Black).bg(Color::White))
+                //     })
+                //     .collect();
+                // let items = List::new(items)
+                //     .block(Block::default())
+                //     .highlight_style(
+                //         Style::default()
+                //             .bg(Color::LightGreen)
+                //             .add_modifier(Modifier::BOLD),
+                //     )
+                //     .highlight_symbol(">> ");
+                // f.render_stateful_widget(items, chunks[0], &mut app.items.state);
+            }
         })?;
 
         match events.next()? {
@@ -423,6 +438,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                         if (scroll > 0) {
                             scroll -= 1;
                         }
+                    }
+                    Key::Char('f') => {
+                        fullscreen_preview = !fullscreen_preview;
                     }
                     Key::Char('/') => {
                         input_mode = InputMode::Search;
