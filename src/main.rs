@@ -529,5 +529,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+
+    terminal.clear()?;
     Ok(())
 }

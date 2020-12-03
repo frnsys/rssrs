@@ -31,12 +31,12 @@ pub struct Events {
     update_handle: thread::JoinHandle<()>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub exit_key: Key,
     pub update_rate: Duration,
-    pub db_path: Path,
-    pub feeds_path: Path
+    pub db_path: String,
+    pub feeds_path: String
 }
 
 impl Default for Config {
@@ -61,6 +61,7 @@ impl Events {
         let input_handle = {
             let tx = tx.clone();
             let ignore_exit_key = ignore_exit_key.clone();
+            let exit_key = config.exit_key;
             thread::spawn(move || {
                 let stdin = io::stdin();
                 for evt in stdin.keys() {
@@ -69,7 +70,7 @@ impl Events {
                             eprintln!("{}", err);
                             return;
                         }
-                        if !ignore_exit_key.load(Ordering::Relaxed) && key == config.exit_key {
+                        if !ignore_exit_key.load(Ordering::Relaxed) && key == exit_key {
                             return;
                         }
                     }
@@ -77,15 +78,14 @@ impl Events {
             })
         };
 
-        let conf = config.clone();
         let update_handle = {
             thread::spawn(move || loop {
                 if tx.send(Event::Updating).is_err() {
                     break;
                 }
 
-                let db = Database::new(&conf.db_path);
-                for (feed_url, _tags) in load_feeds(&conf.feeds_path) {
+                let db = Database::new(&config.db_path);
+                for (feed_url, _tags) in load_feeds(&config.feeds_path) {
                     update(&feed_url, &db).unwrap();
                 }
 

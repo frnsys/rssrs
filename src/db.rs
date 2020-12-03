@@ -64,18 +64,6 @@ impl Database {
                 description: row.get(5)?,
             })
         })?.filter_map(Result::ok).collect();
-        // let itemsfoo: Vec<Result<Item>> = stmt.query_map(&[channel], |row| {
-        //     Ok(Item {
-        //         url: row.get(0)?,
-        //         read: row.get(1)?,
-        //         channel: row.get(2)?,
-        //         title: row.get(3)?,
-        //         published_at: row.get(4)?,
-        //         description: row.get(5)?,
-        //     })
-        // })?.collect();
-        // println!("{:?}", itemsfoo);
-
         Ok(items)
     }
 }
