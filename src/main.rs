@@ -92,24 +92,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     let db_path = "data/rsrss.db";
     let feeds_path = "data/feeds.txt";
     let update_interval = 10 * 60 * 1000; // ms
-    // let handle = thread::spawn(move || {
-    //     let update_duration = time::Duration::from_millis(update_interval);
-    //     loop {
-    //         println!("updating...");
-    //         let db = Database::new(&db_path);
-    //         for (feed_url, _tags) in load_feeds(&feeds_path) {
-    //             println!("{:?}", feed_url);
-    //             update(&feed_url, &db).unwrap();
-    //         }
-    //         println!("done updating");
-    //         thread::sleep(update_duration);
-    //     }
-    // });
+    let handle = thread::spawn(move || {
+        let update_duration = time::Duration::from_millis(update_interval);
+        loop {
+            let db = Database::new(&db_path);
+            for (feed_url, _tags) in load_feeds(&feeds_path) {
+                println!("{:?}", feed_url);
+                update(&feed_url, &db).unwrap();
+            }
+            thread::sleep(update_duration);
+        }
+    });
     // handle.join().unwrap();
 
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    let mut update_status = "";
     terminal.clear()?;
     // terminal.hide_cursor()?;
 
@@ -164,6 +163,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let (msg, style) = match input_mode {
                 InputMode::Normal => (
                     vec![
+                        Span::raw(update_status),
                         Span::raw(format!("[{} unread] ", items.iter().filter(|i| !i.read).fold(0, |c, _| c + 1))),
                         Span::raw("["),
                         Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
@@ -498,9 +498,34 @@ fn main() -> Result<(), Box<dyn Error>> {
                     _ => {}
                 }
             },
-            Event::Update => {
-                // TODO re-render
-                // app.advance();
+            Event::Updating => {
+                update_status = "Updating...";
+            }
+            Event::Updated => {
+                update_status = "";
+
+                // Update items
+                items = load_feeds(&feeds_path).flat_map(|(feed_url, _tags)| {
+                    // println!("{:?}", db.get_channel_items(&feed_url));
+                    db.get_channel_items(&feed_url).ok()
+                }).flatten().collect();
+                items.sort_by_cached_key(|i| match i.published_at {
+                    Some(ts) => -ts,
+                    None => 0
+                });
+
+                table.set_items(items.iter().map(|i| {
+                    let pub_date = match i.published_at {
+                        Some(ts) => Local.timestamp(ts, 0).format("%m/%d/%y %H:%M").to_string(),
+                        None => "<no pub date>".to_string()
+                    };
+
+                    vec![
+                        i.title.as_deref().unwrap_or("<no title>").to_string(),
+                        pub_date,
+                        i.channel.clone(),
+                    ]
+                }).collect());
             }
         }
     }

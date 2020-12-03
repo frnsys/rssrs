@@ -1,4 +1,5 @@
 use std::io;
+use std::path::Path;
 use std::sync::mpsc;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -10,9 +11,15 @@ use std::time::Duration;
 use termion::event::Key;
 use termion::input::TermRead;
 
+use super::sync::update;
+use super::db::{Database, Item};
+use super::conf::load_feeds;
+
+
 pub enum Event<I> {
     Input(I),
-    Update,
+    Updating,
+    Updated,
 }
 
 /// A small event handler that wrap termion input and update events. Each event
@@ -28,13 +35,17 @@ pub struct Events {
 pub struct Config {
     pub exit_key: Key,
     pub update_rate: Duration,
+    pub db_path: Path,
+    pub feeds_path: Path
 }
 
 impl Default for Config {
     fn default() -> Config {
         Config {
             exit_key: Key::Char('q'),
-            update_rate: Duration::from_millis(250),
+            update_rate: Duration::from_millis(25000),
+            db_path: "data/rsrss.db".to_string(),
+            feeds_path: "data/feeds.txt".to_string()
         }
     }
 }
@@ -65,9 +76,20 @@ impl Events {
                 }
             })
         };
+
+        let conf = config.clone();
         let update_handle = {
             thread::spawn(move || loop {
-                if tx.send(Event::Update).is_err() {
+                if tx.send(Event::Updating).is_err() {
+                    break;
+                }
+
+                let db = Database::new(&conf.db_path);
+                for (feed_url, _tags) in load_feeds(&conf.feeds_path) {
+                    update(&feed_url, &db).unwrap();
+                }
+
+                if tx.send(Event::Updated).is_err() {
                     break;
                 }
                 thread::sleep(config.update_rate);
