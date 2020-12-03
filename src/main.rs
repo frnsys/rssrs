@@ -8,7 +8,7 @@ use webbrowser;
 use self::sync::update;
 use self::db::{Database, Item};
 use std::{thread, time};
-use self::conf::load_feeds;
+use self::conf::Config;
 use self::ui::{StatefulList, StatefulTable};
 use self::events::{Events, Event};
 
@@ -35,6 +35,7 @@ enum InputMode {
     Normal,
     Search,
 }
+
 
 struct App {
     items: StatefulList<Item>
@@ -89,28 +90,13 @@ fn split_keep<'a>(r: &Regex, text: &'a str) -> Vec<(&'a str, bool)> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let db_path = "data/rsrss.db";
-    let feeds_path = "data/feeds.txt";
-    let update_interval = 10 * 60 * 1000; // ms
-    let handle = thread::spawn(move || {
-        let update_duration = time::Duration::from_millis(update_interval);
-        loop {
-            let db = Database::new(&db_path);
-            for (feed_url, _tags) in load_feeds(&feeds_path) {
-                println!("{:?}", feed_url);
-                update(&feed_url, &db).unwrap();
-            }
-            thread::sleep(update_duration);
-        }
-    });
-    // handle.join().unwrap();
+    let config = Config::default();
 
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let mut update_status = "";
     terminal.clear()?;
-    // terminal.hide_cursor()?;
 
     let mut table = StatefulTable::new();
     let mut fullscreen_preview = false;
@@ -122,14 +108,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut events = Events::new();
     let mut app = App::new();
 
-    let db = Database::new(&db_path);
-    for (feed_url, _tags) in load_feeds(&feeds_path) {
-        // println!("{:?}", feed_url);
-        update(&feed_url, &db).unwrap();
-    }
+    let db = Database::new(&config.db_path);
 
     // TODO why do i need both flat map and flatten?
-    let mut items: Vec<Item> = load_feeds(&feeds_path).flat_map(|(feed_url, _tags)| {
+    let mut items: Vec<Item> = config.load_feeds().flat_map(|(feed_url, _tags)| {
         // println!("{:?}", db.get_channel_items(&feed_url));
         db.get_channel_items(&feed_url).ok()
     }).flatten().collect();
@@ -505,7 +487,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 update_status = "";
 
                 // Update items
-                items = load_feeds(&feeds_path).flat_map(|(feed_url, _tags)| {
+                items = config.load_feeds().flat_map(|(feed_url, _tags)| {
                     // println!("{:?}", db.get_channel_items(&feed_url));
                     db.get_channel_items(&feed_url).ok()
                 }).flatten().collect();

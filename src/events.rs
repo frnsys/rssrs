@@ -13,7 +13,7 @@ use termion::input::TermRead;
 
 use super::sync::update;
 use super::db::{Database, Item};
-use super::conf::load_feeds;
+use super::conf::Config;
 
 
 pub enum Event<I> {
@@ -31,24 +31,6 @@ pub struct Events {
     update_handle: thread::JoinHandle<()>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub exit_key: Key,
-    pub update_rate: Duration,
-    pub db_path: String,
-    pub feeds_path: String
-}
-
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            exit_key: Key::Char('q'),
-            update_rate: Duration::from_millis(25000),
-            db_path: "data/rsrss.db".to_string(),
-            feeds_path: "data/feeds.txt".to_string()
-        }
-    }
-}
 
 impl Events {
     pub fn new() -> Events {
@@ -61,7 +43,7 @@ impl Events {
         let input_handle = {
             let tx = tx.clone();
             let ignore_exit_key = ignore_exit_key.clone();
-            let exit_key = config.exit_key;
+            let exit_key = config.keys.exit_key;
             thread::spawn(move || {
                 let stdin = io::stdin();
                 for evt in stdin.keys() {
@@ -85,7 +67,7 @@ impl Events {
                 }
 
                 let db = Database::new(&config.db_path);
-                for (feed_url, _tags) in load_feeds(&config.feeds_path) {
+                for (feed_url, _tags) in config.load_feeds() {
                     update(&feed_url, &db).unwrap();
                 }
 
