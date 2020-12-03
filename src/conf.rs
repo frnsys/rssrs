@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::path::Path;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::time::Duration;

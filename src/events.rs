@@ -1,18 +1,16 @@
 use std::io;
-use std::path::Path;
-use std::sync::mpsc;
 use std::sync::{
+    mpsc,
     atomic::{AtomicBool, Ordering},
     Arc,
 };
 use std::thread;
-use std::time::Duration;
 
 use termion::event::Key;
 use termion::input::TermRead;
 
+use super::db::Database;
 use super::sync::update;
-use super::db::{Database, Item};
 use super::conf::Config;
 
 
@@ -33,10 +31,6 @@ pub struct Events {
 
 
 impl Events {
-    pub fn new() -> Events {
-        Events::with_config(Config::default())
-    }
-
     pub fn with_config(config: Config) -> Events {
         let (tx, rx) = mpsc::channel();
         let ignore_exit_key = Arc::new(AtomicBool::new(false));

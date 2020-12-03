@@ -1,12 +1,11 @@
 use rss::Channel;
+use chrono::DateTime;
 use rusqlite::Result;
 use html2md::parse_html;
 use super::db::{Database, Item};
-use chrono::{DateTime, Utc};
 
 pub fn update(channel_url: &str, db: &Database) -> Result<()> {
     let channel = Channel::from_url(channel_url).unwrap();
-    let pub_date = channel.pub_date();
     // let title = channel.title();
     for it in channel.items() {
         let item = Item {

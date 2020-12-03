@@ -5,50 +5,31 @@ mod conf;
 mod events;
 
 use webbrowser;
-use self::sync::update;
 use self::db::{Database, Item};
-use std::{thread, time};
 use self::conf::Config;
-use self::ui::{StatefulList, StatefulTable};
+use self::ui::StatefulTable;
 use self::events::{Events, Event};
 
 use regex::{Regex, RegexBuilder};
-use std::io;
 use termion::raw::IntoRawMode;
 use termion::event::Key;
-use termion::input::TermRead;
 
-use std::{error::Error};
+use std::{io, error::Error};
 use tui::{
     backend::TermionBackend,
-    layout::{Constraint, Corner, Direction, Layout, Alignment},
+    layout::{Constraint, Direction, Layout, Alignment},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    // widgets::{Block, Borders, List, ListItem},
     widgets::{Block, Borders, Cell, Row, Table, Paragraph, Wrap},
     Terminal,
 };
 
-use chrono::{DateTime, TimeZone, NaiveDateTime, Utc, Local};
+use chrono::{TimeZone, Local};
 
 enum InputMode {
     Normal,
     Search,
 }
-
-
-struct App {
-    items: StatefulList<Item>
-}
-
-impl App {
-    fn new() -> App {
-        App {
-            items: StatefulList::with_items(vec![])
-        }
-    }
-}
-
 
 
 fn mark_selected_read(db: &Database, items: &mut Vec<Item>, table: &StatefulTable) {
@@ -105,8 +86,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut search_results: Vec<usize> = Vec::new();
 
-    let mut events = Events::new();
-    let mut app = App::new();
+    let mut events = Events::with_config(config.clone());
 
     let db = Database::new(&config.db_path);
 
@@ -219,7 +199,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 None => Paragraph::new("No item selected.")
             };
 
-            if (fullscreen_preview) {
+            if fullscreen_preview {
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([
@@ -342,9 +322,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Key::Char('q') => {
                         break;
                     }
-                    Key::Left => {
-                        // app.items.unselect();
-                    }
                     Key::Char('u') => {
                         mark_selected_unread(&db, &mut items, &table);
                     }
@@ -439,7 +416,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         scroll += 1;
                     }
                     Key::Char('K') => {
-                        if (scroll > 0) {
+                        if scroll > 0 {
                             scroll -= 1;
                         }
                     }
@@ -458,7 +435,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                         let reg = format!(r"({})", &search_query);
                         let regex = RegexBuilder::new(&reg).case_insensitive(true).build().expect("Invalid regex");
-                        search_results = items.iter().enumerate().filter(|(i, item)| {
+                        search_results = items.iter().enumerate().filter(|(_, item)| {
                             match &item.title {
                                 Some(title) => regex.is_match(title),
                                 None => false
