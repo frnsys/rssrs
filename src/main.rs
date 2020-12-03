@@ -152,11 +152,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             let (msg, style) = match input_mode {
                 InputMode::Normal => (
                     vec![
-                        Span::raw("Press "),
+                        Span::raw(format!("[{} unread] ", items.iter().filter(|i| !i.read).fold(0, |c, _| c + 1))),
+                        Span::raw("["),
                         Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to exit, "),
-                        Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to start editing."),
+                        Span::raw(" quit]"),
+                        Span::raw(" ["),
+                        Span::styled("/", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(" search]"),
+                        Span::raw(" ["),
+                        Span::styled("f", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(" fullscreen]"),
                     ],
                     Style::default().add_modifier(Modifier::RAPID_BLINK),
                 ),
