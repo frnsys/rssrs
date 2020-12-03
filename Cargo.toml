@@ -9,3 +9,8 @@ edition = "2018"
 [dependencies]
 rss = { version = "1.9.0", features = ["from_url"] }
 rusqlite = "0.24.1"
+# tui = "0.13"
+tui = { git = "https://github.com/fdehau/tui-rs" }
+termion = "1.5"
+html2md = "0.2.10"
+webbrowser = "0.5.5"

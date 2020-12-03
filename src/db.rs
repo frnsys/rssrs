@@ -21,7 +21,7 @@ impl Database {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS item (
                       url             TEXT PRIMARY KEY,
-                      read            BOOLEAN,
+                      read            INTEGER DEFAULT 0,
                       channel         TEXT,
                       title           TEXT,
                       published_at    TEXT,
@@ -44,6 +44,14 @@ impl Database {
         Ok(())
     }
 
+    pub fn set_item_read(&self, item: &Item, read: bool) -> Result<()> {
+        self.conn.execute(
+            "UPDATE item SET read=? WHERE url == ?",
+            params![read, item.url],
+        )?;
+        Ok(())
+    }
+
     pub fn get_channel_items(&self, channel: &str) -> Result<Vec<Item>> {
         let mut stmt = self.conn.prepare("SELECT * FROM item WHERE channel == ?")?;
         let items = stmt.query_map(&[channel], |row| {
@@ -56,6 +64,18 @@ impl Database {
                 description: row.get(5)?,
             })
         })?.filter_map(Result::ok).collect();
+        // let itemsfoo: Vec<Result<Item>> = stmt.query_map(&[channel], |row| {
+        //     Ok(Item {
+        //         url: row.get(0)?,
+        //         read: row.get(1)?,
+        //         channel: row.get(2)?,
+        //         title: row.get(3)?,
+        //         published_at: row.get(4)?,
+        //         description: row.get(5)?,
+        //     })
+        // })?.collect();
+        // println!("{:?}", itemsfoo);
+
         Ok(items)
     }
 }
