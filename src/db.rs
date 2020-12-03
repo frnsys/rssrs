@@ -7,7 +7,7 @@ pub struct Item {
     pub channel: String,
     pub title: Option<String>,
     pub url: Option<String>,
-    pub published_at: Option<String>,
+    pub published_at: Option<i64>,
     pub description: Option<String>
 }
 
@@ -24,7 +24,7 @@ impl Database {
                       read            INTEGER DEFAULT 0,
                       channel         TEXT,
                       title           TEXT,
-                      published_at    TEXT,
+                      published_at    INTEGER,
                       description     TEXT
                       )",
             params![],

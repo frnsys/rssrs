@@ -29,6 +29,8 @@ use tui::{
     Terminal,
 };
 
+use chrono::{DateTime, TimeZone, NaiveDateTime, Utc, Local};
+
 enum InputMode {
     Normal,
     Search,
@@ -45,6 +47,8 @@ impl App {
         }
     }
 }
+
+
 
 fn mark_selected_read(db: &Database, items: &mut Vec<Item>, table: &StatefulTable) {
     match table.state.selected() {
@@ -132,10 +136,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     }).flatten().collect();
 
     table.set_items(items.iter().map(|i| {
-        // This seems unnecessarily messy
+        let pub_date = match i.published_at {
+            Some(ts) => Local.timestamp(ts, 0).format("%m/%d/%y %H:%M").to_string(),
+            None => "<no pub date>".to_string()
+        };
+
         vec![
             i.title.as_deref().unwrap_or("<no title>").to_string(),
-            i.published_at.as_deref().unwrap_or("<no pub date>").to_string(),
+            pub_date,
             i.channel.clone(),
         ]
     }).collect());
@@ -184,11 +192,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                     // let mut long_line = s.repeat(usize::from(size.width) / s.len() + 4);
                     // long_line.push('\n');
                     let item = &items[i];
+                    let pub_date = match item.published_at {
+                        Some(ts) => Local.timestamp(ts, 0).format("%B %d, %Y %H:%M").to_string(),
+                        None => "<no pub date>".to_string()
+                    };
+
                     let mut text = vec![
                         // Must be a better way
                         Spans::from(
                             Span::styled(item.title.as_deref().unwrap_or("<no title>"), Style::default().fg(Color::Yellow))),
-                        Spans::from(item.published_at.as_deref().unwrap_or("<no publish date>")),
+                        Spans::from(pub_date),
                         Spans::from(item.channel.clone()),
                         Spans::from("\n"),
                         // Spans::from("This is a line "),
