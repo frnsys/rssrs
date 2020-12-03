@@ -1,9 +1,5 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 use std::time::Duration;
 use termion::event::Key;
-
 
 
 #[derive(Debug, Clone)]
@@ -23,23 +19,6 @@ impl Default for Config {
             db_path: "data/rsrss.db".to_string(),
             feeds_path: "data/feeds.txt".to_string()
         }
-    }
-}
-
-impl Config {
-    /*
-     * Feeds file: one feed per line in the format:
-     * <url> <comma-delimited tags>
-     */
-    pub fn load_feeds(&self) -> impl Iterator<Item=(String, Vec<String>)> {
-        let file = File::open(&self.feeds_path).unwrap();
-
-        BufReader::new(file).lines().filter_map(Result::ok).map(|line| {
-            let mut split = line.splitn(2, ' ');
-            let url = split.next().unwrap().to_string();
-            let tags = split.next().unwrap_or("").split(",").map(|s| s.to_string()).collect();
-            (url, tags)
-        })
     }
 }
 
