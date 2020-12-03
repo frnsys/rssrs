@@ -1353,6 +1353,7 @@ name = "rsrss"
 version = "0.1.0"
 dependencies = [
  "html2md",
+ "regex",
  "rss",
  "rusqlite",
  "termion",

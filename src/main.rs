@@ -12,6 +12,7 @@ use self::conf::load_feeds;
 use self::ui::{StatefulList, StatefulTable};
 use self::events::{Events, Event};
 
+use regex::{Regex, RegexBuilder};
 use std::io;
 use termion::raw::IntoRawMode;
 use termion::event::Key;
@@ -22,11 +23,16 @@ use tui::{
     backend::TermionBackend,
     layout::{Constraint, Corner, Direction, Layout, Alignment},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::{Span, Spans, Text},
     // widgets::{Block, Borders, List, ListItem},
     widgets::{Block, Borders, Cell, Row, Table, Paragraph, Wrap},
     Terminal,
 };
+
+enum InputMode {
+    Normal,
+    Search,
+}
 
 struct App {
     items: StatefulList<Item>
@@ -60,6 +66,24 @@ fn mark_selected_unread(db: &Database, items: &mut Vec<Item>, table: &StatefulTa
     }
 }
 
+fn split_keep<'a>(r: &Regex, text: &'a str) -> Vec<(&'a str, bool)> {
+    let mut result = Vec::new();
+    let mut last = 0;
+    for mat in r.find_iter(text) {
+        let index = mat.start();
+        let matched = mat.as_str();
+        if last != index {
+            result.push((&text[last..index], false));
+        }
+        result.push((matched, true));
+        last = index + matched.len();
+    }
+    if last < text.len() {
+        result.push((&text[last..], false));
+    }
+    result
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let db_path = "data/rsrss.db";
     let feeds_path = "data/feeds.txt";
@@ -87,7 +111,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut table = StatefulTable::new();
 
-    let events = Events::new();
+    let mut input_mode = InputMode::Normal;
+
+    let mut search_results: Vec<usize> = Vec::new();
+
+    let mut events = Events::new();
     let mut app = App::new();
 
     let db = Database::new(&db_path);
@@ -107,7 +135,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         vec![
             i.title.as_deref().unwrap_or("<no title>").to_string(),
             i.published_at.as_deref().unwrap_or("<no pub date>").to_string(),
-            // i.channel.clone(),
             i.channel.clone(),
         ]
     }).collect());
@@ -117,11 +144,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     terminal.clear()?;
     let mut scroll: u16 = 0;
+    let mut search_input = String::new();
+    let mut search_query = String::new();
     loop {
         terminal.draw(|f| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+                .constraints([
+                     Constraint::Min(1),
+                     Constraint::Percentage(50),
+                     Constraint::Length(1),
+                ].as_ref())
                 .split(f.size());
 
             let selected_style = Style::default().add_modifier(Modifier::REVERSED);
@@ -133,6 +166,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .style(normal_style)
                 .height(1);
 
+            let reg = match input_mode {
+                InputMode::Normal => format!(r"({})", &search_query),
+                InputMode::Search => format!(r"({})", &search_input)
+            };
+            let separator = RegexBuilder::new(&reg).case_insensitive(true).build().expect("Invalid regex");
+
             let rows = table.items.iter().enumerate().map(|(i, item)| {
                 let height = item
                     .iter()
@@ -140,7 +179,31 @@ fn main() -> Result<(), Box<dyn Error>> {
                     .max()
                     .unwrap_or(1)
                     + 1;
-                let cells = item.iter().map(|c| Cell::from(c.clone()));
+                let cells = item.iter().map(|c| {
+                    let parts = split_keep(&separator, c);
+                    let spans: Vec<Span> = parts.iter().map(|(text, is_match)| {
+                        if *is_match {
+                            Span::styled(*text, Style::default().fg(Color::Yellow))
+                        } else {
+                            Span::raw(*text)
+                        }
+                    }).collect();
+                    Cell::from(Spans::from(spans))
+
+                    // if search_results.contains(&i) {
+                    //     let parts = split_keep(&separator, c);
+                    //     let spans: Vec<Span> = parts.iter().map(|(text, is_match)| {
+                    //         if *is_match {
+                    //             Span::styled(*text, Style::default().fg(Color::Yellow))
+                    //         } else {
+                    //             Span::raw(*text)
+                    //         }
+                    //     }).collect();
+                    //     Cell::from(Spans::from(spans))
+                    // } else {
+                    //     Cell::from(Spans::from(c.clone()))
+                    // }
+                });
                 let style = if items[i].read {
                     Style::default().fg(Color::Rgb(100,100,100))
                 } else {
@@ -203,6 +266,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                 None => {}
             }
 
+            let (msg, style) = match input_mode {
+                InputMode::Normal => (
+                    vec![
+                        Span::raw("Press "),
+                        Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(" to exit, "),
+                        Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(" to start editing."),
+                    ],
+                    Style::default().add_modifier(Modifier::RAPID_BLINK),
+                ),
+                InputMode::Search => (
+                    vec![
+                        Span::raw("/"),
+                        Span::styled(&search_input, Style::default().add_modifier(Modifier::BOLD)),
+                    ],
+                    Style::default(),
+                ),
+            };
+            let mut text = Text::from(Spans::from(msg));
+            text.patch_style(style);
+            let help_message = Paragraph::new(text).style(Style::default().bg(Color::DarkGray));
+            f.render_widget(help_message, chunks[2]);
+
             // let items: Vec<ListItem> = app
             //     .items
             //     .items
@@ -231,67 +318,145 @@ fn main() -> Result<(), Box<dyn Error>> {
         })?;
 
         match events.next()? {
-            Event::Input(input) => match input {
-                Key::Char('q') => {
-                    break;
-                }
-                Key::Left => {
-                    // app.items.unselect();
-                }
-                Key::Char('u') => {
-                    mark_selected_unread(&db, &mut items, &table);
-                }
-                // Key::Down => {
-                Key::Char('j') => {
-                    // app.items.next();
-                    table.next();
-                    mark_selected_read(&db, &mut items, &table);
-                    scroll = 0; // reset paragraph scroll
-                }
-                Key::Char('\n') => {
-                    match table.state.selected() {
-                        Some(i) => {
-                            match &items[i].url {
-                                Some(url) => {
-                                    webbrowser::open(&url);
-                                },
-                                None => {}
-                            }
-                        },
-                        None => {}
-                    };
-                    // if webbrowser::open("http://github.com").is_ok() {
-                }
-                // Key::Up => {
-                Key::Char('k') => {
-                    // app.items.previous();
-                    table.previous();
-                    mark_selected_read(&db, &mut items, &table);
-                    scroll = 0; // reset paragraph scroll
-                }
-                // TODO No idea this keypress doesn't register
-                // https://docs.rs/termion/1.5.5/termion/event/enum.Key.html
-                // docs say that some keys can't be modified by ctrl, but ctrl+j works elsewhere
-                // Key::Ctrl('j') => {
-                Key::Ctrl('n') => {
-                    table.jump_forward(5);
-                    mark_selected_read(&db, &mut items, &table);
-                    scroll = 0; // reset paragraph scroll
-                }
-                Key::Ctrl('k') => {
-                    table.jump_backward(5);
-                    mark_selected_read(&db, &mut items, &table);
-                    scroll = 0; // reset paragraph scroll
-                }
-                Key::Char('J') => {
-                    scroll += 1;
-                }
-                Key::Char('K') => {
-                    if (scroll > 0) {
-                        scroll -= 1;
+            Event::Input(input) => match input_mode {
+                InputMode::Normal => match input {
+                    Key::Char('q') => {
+                        break;
                     }
+                    Key::Left => {
+                        // app.items.unselect();
+                    }
+                    Key::Char('u') => {
+                        mark_selected_unread(&db, &mut items, &table);
+                    }
+                    // Key::Down => {
+                    Key::Char('j') => {
+                        // app.items.next();
+                        table.next();
+                        mark_selected_read(&db, &mut items, &table);
+                        scroll = 0; // reset paragraph scroll
+                    }
+                    Key::Char('\n') => {
+                        match table.state.selected() {
+                            Some(i) => {
+                                match &items[i].url {
+                                    Some(url) => {
+                                        webbrowser::open(&url);
+                                    },
+                                    None => {}
+                                }
+                            },
+                            None => {}
+                        };
+                        // if webbrowser::open("http://github.com").is_ok() {
+                    }
+
+                    Key::Char('n') => {
+                        if search_results.len() > 0 {
+                            match table.state.selected() {
+                                Some(i) => {
+                                    if i >= *search_results.last().unwrap() {
+                                        table.state.select(Some(search_results[0]));
+                                    } else {
+                                        for si in &search_results {
+                                            if *si > i {
+                                                table.state.select(Some(*si));
+                                                break;
+                                            }
+                                        }
+                                    }
+                                },
+                                None => {
+                                    table.state.select(Some(search_results[0]));
+                                }
+                            }
+                        }
+                    }
+                    Key::Ctrl('n') => {
+                        if search_results.len() > 0 {
+                            match table.state.selected() {
+                                Some(i) => {
+                                    if i <= search_results[0] {
+                                        let last = search_results.last().unwrap();
+                                        table.state.select(Some(*last));
+                                    } else {
+                                        for si in search_results.iter().rev() {
+                                            if *si < i {
+                                                table.state.select(Some(*si));
+                                                break;
+                                            }
+                                        }
+                                    }
+                                },
+                                None => {
+                                    table.state.select(Some(search_results[0]));
+                                }
+                            }
+                        }
+                    }
+
+                    // Key::Up => {
+                    Key::Char('k') => {
+                        // app.items.previous();
+                        table.previous();
+                        mark_selected_read(&db, &mut items, &table);
+                        scroll = 0; // reset paragraph scroll
+                    }
+                    // TODO No idea this keypress doesn't register
+                    // https://docs.rs/termion/1.5.5/termion/event/enum.Key.html
+                    // docs say that some keys can't be modified by ctrl, but ctrl+j works elsewhere
+                    // Key::Ctrl('j') => {
+                    Key::Ctrl('m') => {
+                        table.jump_forward(5);
+                        mark_selected_read(&db, &mut items, &table);
+                        scroll = 0; // reset paragraph scroll
+                    }
+                    Key::Ctrl('k') => {
+                        table.jump_backward(5);
+                        mark_selected_read(&db, &mut items, &table);
+                        scroll = 0; // reset paragraph scroll
+                    }
+                    Key::Char('J') => {
+                        scroll += 1;
+                    }
+                    Key::Char('K') => {
+                        if (scroll > 0) {
+                            scroll -= 1;
+                        }
+                    }
+                    Key::Char('/') => {
+                        input_mode = InputMode::Search;
+                        events.disable_exit_key();
+                    }
+                    _ => {}
+                },
+                InputMode::Search => match input {
+                    Key::Char('\n') => {
+                        search_query = search_input.drain(..).collect();
+
+                        let reg = format!(r"({})", &search_query);
+                        let regex = RegexBuilder::new(&reg).case_insensitive(true).build().expect("Invalid regex");
+                        search_results = items.iter().enumerate().filter(|(i, item)| {
+                            match &item.title {
+                                Some(title) => regex.is_match(title),
+                                None => false
+                            }
+                        }).map(|i| i.0).collect();
+                        input_mode = InputMode::Normal;
+                    }
+                    Key::Char(c) => {
+                        search_input.push(c);
+                    }
+                    Key::Backspace => {
+                        search_input.pop();
+                    }
+                    Key::Esc => {
+                        search_input.clear();
+                        input_mode = InputMode::Normal;
+                        events.enable_exit_key();
+                    }
+                    _ => {}
                 }
-                _ => {}
             },
             Event::Update => {
                 // TODO re-render
