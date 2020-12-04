@@ -1,7 +1,9 @@
 use webbrowser;
-use chrono::{TimeZone, Local, DateTime, Utc};
+use chrono::{TimeZone, Local, Utc};
 use super::db::{Database, Item};
-use super::util::{StatefulTable, load_feeds};
+use super::util::{StatefulTable};
+use super::feeds::{Feed, load_feeds};
+use std::collections::HashMap;
 use regex::{Regex, RegexBuilder};
 
 pub enum InputMode {
@@ -12,7 +14,7 @@ pub enum InputMode {
 pub struct Filter {
     pub read: Option<bool>,
     pub starred: Option<bool>,
-    pub channels: Vec<String>,
+    pub feeds: Vec<String>,
     pub keywords: Vec<String>,
     pub tags: Vec<String>,
 }
@@ -22,7 +24,7 @@ impl Default for Filter {
         Filter {
             read: Some(false),
             starred: None,
-            channels: vec![],
+            feeds: vec![],
             keywords: vec![],
             tags: vec![]
         }
@@ -30,10 +32,9 @@ impl Default for Filter {
 }
 
 impl Filter {
-    pub fn filter_feed(&self, feed: &(String, Vec<String>)) -> bool {
-        let (channel, tags) = feed;
-        (self.channels.len() == 0 || self.channels.contains(channel))
-            && (self.tags.len() == 0 || self.tags.iter().any(|tag| tags.contains(tag)))
+    pub fn filter_feed(&self, feed: &Feed) -> bool {
+        (self.feeds.len() == 0 || self.feeds.contains(&feed.url))
+            && (self.tags.len() == 0 || self.tags.iter().any(|tag| feed.tags.contains(tag)))
     }
 
     pub fn filter_item(&self, item: &Item) -> bool {
@@ -66,6 +67,7 @@ pub struct App {
 
     pub filter: Filter,
     pub items: Vec<Item>,
+    pub feeds: HashMap<String, Feed>,
     pub table: StatefulTable,
 
     pub search_results: Vec<usize>,
@@ -90,6 +92,7 @@ impl App {
 
             filter: Filter::default(),
             items: Vec::new(),
+            feeds: HashMap::default(),
             table: StatefulTable::new(),
 
             search_input: None,
@@ -104,11 +107,16 @@ impl App {
 
     // Load items according to filter
     pub fn _load_items(&mut self) -> Vec<Item> {
+        // Also store feeds for referencing later
+        for feed in load_feeds(&self.feeds_path) {
+            self.feeds.insert(feed.url.clone(), feed);
+        }
+
         let feeds = load_feeds(&self.feeds_path).filter(|f| self.filter.filter_feed(f));
 
         // TODO why do I need both flat map and flatten?
-        let mut items: Vec<Item> = feeds.flat_map(|(feed_url, _tags)| {
-                self.db.get_channel_items(&feed_url).ok()
+        let mut items: Vec<Item> = feeds.flat_map(|feed| {
+                self.db.get_feed_items(&feed.url).ok()
             }).flatten().filter(|i| self.filter.filter_item(i)).collect();
 
         // Most recent first
@@ -116,6 +124,8 @@ impl App {
             Some(ts) => -ts,
             None => 0
         });
+
+
         items
     }
 

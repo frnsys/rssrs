@@ -10,9 +10,8 @@ use termion::event::Key;
 use termion::input::TermRead;
 
 use super::db::Database;
-use super::sync::update;
 use super::conf::Config;
-use super::util::load_feeds;
+use super::feeds::{load_feeds, update};
 
 
 pub enum Event<I> {
@@ -62,8 +61,8 @@ impl Events {
                 }
 
                 let db = Database::new(&config.db_path);
-                for (feed_url, _tags) in load_feeds(&config.feeds_path) {
-                    update(&feed_url, &db).unwrap();
+                for feed in load_feeds(&config.feeds_path) {
+                    update(&feed.url, &db).unwrap();
                 }
 
                 if tx.send(Event::Updated).is_err() {

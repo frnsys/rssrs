@@ -1,8 +1,8 @@
 mod db;
 mod app;
 mod util;
-mod sync;
 mod conf;
+mod feeds;
 mod views;
 mod events;
 

@@ -39,7 +39,7 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
                     ""
                 } else {
                     "T"
-                }, if app.filter.channels.len() == 0 {
+                }, if app.filter.feeds.len() == 0 {
                     ""
                 } else {
                     "C"
@@ -72,8 +72,9 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
             let mut text = vec![
                 Spans::from(
                     Span::styled(item.title.as_deref().unwrap_or("<no title>"), Style::default().fg(Color::Yellow))),
+                Spans::from(format!("{} ({})", app.feeds[&item.feed].title.clone(), item.feed.clone())),
+                Spans::from(item.url.as_deref().unwrap_or("<no url>")),
                 Spans::from(pub_date),
-                Spans::from(item.channel.clone()),
                 Spans::from("\n"),
             ];
 

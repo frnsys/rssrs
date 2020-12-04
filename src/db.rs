@@ -5,7 +5,7 @@ use rusqlite::{params, Connection, Result};
 pub struct Item {
     pub read: bool,
     pub starred: bool,
-    pub channel: String,
+    pub feed: String,
     pub retrieved_at: i64,
     pub title: Option<String>,
     pub url: Option<String>,
@@ -25,7 +25,7 @@ impl Database {
                       url             TEXT PRIMARY KEY,
                       read            INTEGER DEFAULT 0,
                       starred         INTEGER DEFAULT 0,
-                      channel         TEXT,
+                      feed            TEXT,
                       title           TEXT,
                       published_at    INTEGER,
                       retrieved_at    INTEGER,
@@ -42,8 +42,8 @@ impl Database {
     pub fn add_item(&self, item: &Item) -> Result<()> {
         // Ignore unique constraint conflicts
         self.conn.execute(
-            "INSERT OR IGNORE INTO item (url, channel, title, published_at, retrieved_at, description) VALUES (?, ?, ?, ?, ?, ?)",
-            params![item.url, item.channel, item.title, item.published_at, item.retrieved_at, item.description],
+            "INSERT OR IGNORE INTO item (url, feed, title, published_at, retrieved_at, description) VALUES (?, ?, ?, ?, ?, ?)",
+            params![item.url, item.feed, item.title, item.published_at, item.retrieved_at, item.description],
         )?;
         Ok(())
     }
@@ -64,14 +64,14 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_channel_items(&self, channel: &str) -> Result<Vec<Item>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM item WHERE channel == ?")?;
-        let items = stmt.query_map(&[channel], |row| {
+    pub fn get_feed_items(&self, feed: &str) -> Result<Vec<Item>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM item WHERE feed == ?")?;
+        let items = stmt.query_map(&[feed], |row| {
             Ok(Item {
                 url: row.get(0)?,
                 read: row.get(1)?,
                 starred: row.get(2)?,
-                channel: row.get(3)?,
+                feed: row.get(3)?,
                 title: row.get(4)?,
                 published_at: row.get(5)?,
                 retrieved_at: row.get(6)?,
