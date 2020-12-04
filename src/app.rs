@@ -9,13 +9,45 @@ pub enum InputMode {
     Search,
 }
 
-pub enum Filter {
-    All,
-    Read(bool),
-    Starred(bool),
-    Channel(String),
-    Keyword(String),
-    Tag(String)
+pub struct Filter {
+    pub read: Option<bool>,
+    pub starred: Option<bool>,
+    pub channels: Vec<String>,
+    pub keywords: Vec<String>,
+    pub tags: Vec<String>,
+}
+
+impl Default for Filter {
+    fn default() -> Filter {
+        Filter {
+            read: Some(false),
+            starred: None,
+            channels: vec![],
+            keywords: vec![],
+            tags: vec![]
+        }
+    }
+}
+
+impl Filter {
+    pub fn filter_feed(&self, feed: &(String, Vec<String>)) -> bool {
+        let (channel, tags) = feed;
+        (self.channels.len() == 0 || self.channels.contains(channel))
+            && (self.tags.len() == 0 || self.tags.iter().any(|tag| tags.contains(tag)))
+    }
+
+    pub fn filter_item(&self, item: &Item) -> bool {
+        (match self.read {
+            Some(read) => item.read == read,
+            None => true
+        }) && (match self.starred {
+            Some(starred) => item.starred == starred,
+            None => true
+        }) && (self.keywords.len() == 0 || self.keywords.iter().any(|kw| match &item.title {
+            Some(title) => title.contains(kw),
+            None => false
+        }))
+    }
 }
 
 pub enum Status {
@@ -32,7 +64,7 @@ pub struct App {
     pub input_mode: InputMode,
     pub last_updated: i64,
 
-    filter: Filter,
+    pub filter: Filter,
     pub items: Vec<Item>,
     pub table: StatefulTable,
 
@@ -56,7 +88,7 @@ impl App {
             status: Status::Idle,
             last_updated: 0,
 
-            filter: Filter::Read(false),
+            filter: Filter::default(),
             items: Vec::new(),
             table: StatefulTable::new(),
 
@@ -72,22 +104,12 @@ impl App {
 
     // Load items according to filter
     pub fn _load_items(&mut self) -> Vec<Item> {
-        let all_feeds = load_feeds(&self.feeds_path);
-        let feeds: Vec<(String, Vec<String>)> = match &self.filter {
-            Filter::Tag(tag) => all_feeds.filter(|(_, tags)| tags.contains(&tag)).collect(),
-            Filter::Channel(url) => all_feeds.filter(|(feed_url, _)| feed_url == url).collect(),
-            _ => all_feeds.collect()
-        };
+        let feeds = load_feeds(&self.feeds_path).filter(|f| self.filter.filter_feed(f));
 
         // TODO why do I need both flat map and flatten?
-        let mut items: Vec<Item> = feeds.iter().flat_map(|(feed_url, _tags)| {
+        let mut items: Vec<Item> = feeds.flat_map(|(feed_url, _tags)| {
                 self.db.get_channel_items(&feed_url).ok()
-            }).flatten().collect();
-
-        match &self.filter {
-            Filter::Read(read) => items.retain(|i| i.read == *read),
-            _ => {}
-        };
+            }).flatten().filter(|i| self.filter.filter_item(i)).collect();
 
         // Most recent first
         items.sort_by_cached_key(|i| match i.published_at {
