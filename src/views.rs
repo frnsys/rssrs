@@ -11,7 +11,7 @@ use tui::{
 };
 
 
-pub fn render<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend{
+pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
     // Status bar
     let update_str = match app.status {
         Status::Updating => "Updating...",
@@ -21,6 +21,7 @@ pub fn render<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend{
         InputMode::Normal => (
             vec![
                 Span::raw(update_str),
+                Span::raw(format!("[{} unread] ", app.items.iter().filter(|i| !i.read).fold(0, |c, _| c + 1))),
             ],
             Style::default(),
         ),
@@ -147,3 +148,6 @@ pub fn render<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend{
         frame.render_widget(status_bar, chunks[2]);
     }
 }
+
+// pub fn render_filters<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
+// }

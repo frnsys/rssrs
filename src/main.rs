@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     terminal.clear()?;
     loop {
         terminal.draw(|mut f| {
-            views::render(&mut app, &mut f);
+            views::render_browser(&mut app, &mut f);
         })?;
 
         match events.next()? {

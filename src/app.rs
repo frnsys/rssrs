@@ -11,7 +11,10 @@ pub enum InputMode {
 
 pub enum Filter {
     All,
+    Read(bool),
     Channel(String),
+    Keyword(String),
+    Tag(String)
 }
 
 pub enum Status {
@@ -49,7 +52,7 @@ impl App {
             focus_reader: false,
             status: Status::Idle,
 
-            filter: Filter::All,
+            filter: Filter::Read(false),
             items: Vec::new(),
             table: StatefulTable::new(),
 
@@ -64,12 +67,22 @@ impl App {
 
     pub fn load_items(&mut self) {
         // Load items according to filter
-        // TODO use filter
+        let all_feeds = load_feeds(&self.feeds_path);
+        let feeds: Vec<(String, Vec<String>)> = match &self.filter {
+            Filter::Tag(tag) => all_feeds.filter(|(_, tags)| tags.contains(&tag)).collect(),
+            Filter::Channel(url) => all_feeds.filter(|(feed_url, _)| feed_url == url).collect(),
+            _ => all_feeds.collect()
+        };
+
         // TODO why do I need both flat map and flatten?
-        self.items = load_feeds(&self.feeds_path)
-            .flat_map(|(feed_url, _tags)| {
+        self.items = feeds.iter().flat_map(|(feed_url, _tags)| {
                 self.db.get_channel_items(&feed_url).ok()
             }).flatten().collect();
+
+        match &self.filter {
+            Filter::Read(read) => self.items.retain(|i| i.read == *read),
+            _ => {}
+        };
 
         // Most recent first
         self.items.sort_by_cached_key(|i| match i.published_at {

@@ -546,8 +546,7 @@ dependencies = [
 [[package]]
 name = "html2md"
 version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc63d976a14675a0be3c02eb5d0d233f5d51cf6cb6e8277521abef883380f190"
+source = "git+https://gitlab.com/frnsys/html2md#4d651ad323808822da101ab094b1e1f52c088e77"
 dependencies = [
  "html5ever",
  "jni",
@@ -1381,7 +1380,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "rsrss"
+name = "rss"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99979205510c60f80a119dedbabd0b8426517384edf205322f8bcd51796bcef9"
+dependencies = [
+ "derive_builder",
+ "quick-xml",
+ "reqwest",
+]
+
+[[package]]
+name = "rssrs"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -1392,17 +1402,6 @@ dependencies = [
  "termion",
  "tui",
  "webbrowser",
-]
-
-[[package]]
-name = "rss"
-version = "1.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99979205510c60f80a119dedbabd0b8426517384edf205322f8bcd51796bcef9"
-dependencies = [
- "derive_builder",
- "quick-xml",
- "reqwest",
 ]
 
 [[package]]

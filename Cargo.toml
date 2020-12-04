@@ -1,5 +1,5 @@
 [package]
-name = "rsrss"
+name = "rssrs"
 version = "0.1.0"
 authors = ["Francis Tseng <f+accounts@frnsys.com>"]
 edition = "2018"
@@ -12,7 +12,8 @@ rusqlite = "0.24.1"
 # tui = "0.13"
 tui = { git = "https://github.com/fdehau/tui-rs" }
 termion = "1.5"
-html2md = "0.2.10"
+# html2md = "0.2.10"
+html2md = { git = "https://gitlab.com/frnsys/html2md" }
 webbrowser = "0.5.5"
 regex = "1.4.2"
 chrono = "0.4.19"
