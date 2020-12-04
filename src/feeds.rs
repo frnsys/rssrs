@@ -21,17 +21,18 @@ pub struct Feed {
 pub fn load_feeds<P>(path: P) -> impl Iterator<Item=Feed> where P: AsRef<Path> {
     let file = File::open(&path).unwrap();
 
-    BufReader::new(file).lines().filter_map(Result::ok).map(|line| {
-        let mut split = line.splitn(3, '|');
-        let url = split.next().unwrap().to_string();
-        let title = split.next().unwrap().to_string();
-        let tags = split.next().unwrap_or("").split(",").map(|s| s.to_string()).collect();
-        Feed {
-            url: url,
-            title: title,
-            tags: tags
-        }
-    })
+    BufReader::new(file).lines().filter_map(Result::ok)
+        .filter(|line| !line.starts_with('#')).map(|line| {
+            let mut split = line.splitn(3, '|');
+            let url = split.next().unwrap().to_string();
+            let title = split.next().unwrap().to_string();
+            let tags = split.next().unwrap_or("").split(",").map(|s| s.to_string()).collect();
+            Feed {
+                url: url,
+                title: title,
+                tags: tags
+            }
+        })
 }
 
 
