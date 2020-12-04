@@ -15,7 +15,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             keys: KeyBindings::default(),
-            update_rate: Duration::from_millis(25000),
+            update_rate: Duration::from_millis(20*60*1000),
             db_path: "data/rssrs.db".to_string(),
             feeds_path: "data/feeds.txt".to_string()
         }
