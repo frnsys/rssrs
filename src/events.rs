@@ -5,6 +5,7 @@ use std::sync::{
     Arc,
 };
 use std::thread;
+use std::time::Duration;
 
 use termion::event::Key;
 use termion::input::TermRead;
@@ -37,7 +38,7 @@ impl Events {
         let input_handle = {
             let tx = tx.clone();
             let ignore_exit_key = ignore_exit_key.clone();
-            let exit_key = config.keys.exit_key;
+            let exit_key = Key::Char('q');
             thread::spawn(move || {
                 let stdin = io::stdin();
                 for evt in stdin.keys() {
@@ -54,21 +55,20 @@ impl Events {
             })
         };
 
+        let update_rate = Duration::from_secs(config.update_rate);
         let update_handle = {
             thread::spawn(move || loop {
-                if tx.send(Event::Updating).is_err() {
-                    break;
-                }
-
                 let db = Database::new(&config.db_path);
                 for feed in load_feeds(&config.feeds_path) {
+                    if tx.send(Event::Updating).is_err() {
+                        break;
+                    }
                     update(&feed.url, &db).unwrap();
+                    if tx.send(Event::Updated).is_err() {
+                        break;
+                    }
                 }
-
-                if tx.send(Event::Updated).is_err() {
-                    break;
-                }
-                thread::sleep(config.update_rate);
+                thread::sleep(update_rate);
             })
         };
         Events {

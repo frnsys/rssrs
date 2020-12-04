@@ -19,7 +19,7 @@ use tui::{
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = Config::default();
+    let config = Config::load();
     let mut app = App::new(&config.db_path, &config.feeds_path);
     app.load_items();
 

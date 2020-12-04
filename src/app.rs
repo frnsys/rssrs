@@ -1,4 +1,5 @@
 use webbrowser;
+use std::path::{Path, PathBuf};
 use chrono::{TimeZone, Local, Utc};
 use super::db::{Database, Item};
 use super::util::{StatefulTable};
@@ -58,7 +59,7 @@ pub enum Status {
 
 pub struct App {
     db: Database,
-    feeds_path: String,
+    feeds_path: PathBuf,
 
     pub focus_reader: bool,
     pub status: Status,
@@ -80,10 +81,10 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(db_path: &String, feeds_path: &String) -> App {
+    pub fn new<P>(db_path: P, feeds_path: P) -> App where P: AsRef<Path> {
         App {
             db: Database::new(db_path),
-            feeds_path: feeds_path.clone(),
+            feeds_path: feeds_path.as_ref().to_path_buf(),
 
             input_mode: InputMode::Normal,
             focus_reader: false,
