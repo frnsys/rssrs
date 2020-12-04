@@ -46,6 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Key::Ctrl('d') => app.page_items_down(),
                     Key::Ctrl('u') => app.page_items_up(),
                     Key::Char('o') => app.open_selected(),
+                    Key::Char('O') => app.open_marked(),
                     Key::Char('J') => app.scroll_reader_down(),
                     Key::Char('K') => app.scroll_reader_up(),
                     Key::Char('n') => app.jump_to_next_result(),
@@ -54,7 +55,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Key::Char('/') => {
                         app.start_search();
                         events.disable_exit_key();
-                    }
+                    },
+                    Key::Esc => app.clear_marked(),
+                    Key::Char(' ') => app.toggle_selected_mark(),
                     _ => {}
                 },
                 InputMode::Search => match input {

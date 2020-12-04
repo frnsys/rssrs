@@ -40,6 +40,7 @@ pub struct App {
     pub search_query: Option<Regex>,
 
     pub reader_scroll: u16,
+    pub marked: Vec<usize>,
 }
 
 impl App {
@@ -62,6 +63,7 @@ impl App {
             search_input_raw: String::new(),
 
             reader_scroll: 0,
+            marked: Vec::new(),
         }
     }
 
@@ -203,6 +205,17 @@ impl App {
         };
     }
 
+    pub fn open_marked(&self) {
+        for i in &self.marked {
+            match &self.items[*i].url {
+                Some(url) => {
+                    webbrowser::open(&url);
+                },
+                None => {}
+            }
+        }
+    }
+
     pub fn jump_to_next_result(&mut self) {
         if self.search_results.len() > 0 {
             match self.table.state.selected() {
@@ -245,6 +258,23 @@ impl App {
                     self.table.state.select(Some(self.search_results[0]));
                 }
             }
+        }
+    }
+
+    pub fn clear_marked(&mut self) {
+        self.marked.clear();
+    }
+
+    pub fn toggle_selected_mark(&mut self) {
+        match self.table.state.selected() {
+            Some(i) => {
+                if self.marked.contains(&i) {
+                    self.marked.retain(|i_| i_ != &i);
+                } else {
+                    self.marked.push(i);
+                }
+            },
+            None => {}
         }
     }
 }

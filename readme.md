@@ -8,9 +8,9 @@ TODO:
 - multiple filters, e.g. multiple feeds + unread
 - after update, only load new items
 - show channel/feed titles
-- mark multiple and open all
 - load config from file
     - keyword filters
     - update interval
+- starring/saving items
 
 ![](shot.png)

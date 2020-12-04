@@ -126,11 +126,17 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
                 };
                 Cell::from(Spans::from(spans))
             });
-            let style = if app.items[i].read {
-                Style::default().fg(Color::Rgb(100,100,100))
-            } else {
-                Style::default()
-            };
+
+
+            // Color according to read and/or marked status
+            let mut style = Style::default();
+            if app.items[i].read {
+                style = style.fg(Color::Rgb(100,100,100));
+            }
+            if app.marked.contains(&i) {
+                style = style.bg(Color::DarkGray);
+            }
+
             Row::new(cells).height(height as u16).style(style)
         });
         let item_list = Table::new(rows)
