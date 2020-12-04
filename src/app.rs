@@ -166,6 +166,16 @@ impl App {
         }
     }
 
+    pub fn toggle_selected_read(&mut self) {
+        match self.table.state.selected() {
+            Some(i) => {
+                self.items[i].read = !self.items[i].read;
+                self.db.set_item_read(&self.items[i], self.items[i].read);
+            },
+            None => {}
+        }
+    }
+
     pub fn build_query(&self, query: &String) -> Regex {
         let regex = format!(r"({})", query);
         RegexBuilder::new(&regex).case_insensitive(true).build().expect("Invalid regex")
@@ -322,7 +332,7 @@ impl App {
         match self.table.state.selected() {
             Some(i) => {
                 self.items[i].starred = !self.items[i].starred;
-                self.db.set_item_read(&self.items[i], self.items[i].starred);
+                self.db.set_item_starred(&self.items[i], self.items[i].starred);
             },
             None => {}
         }

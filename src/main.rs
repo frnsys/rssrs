@@ -40,8 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Event::Input(input) => match app.input_mode {
                 InputMode::Normal => match input {
                     Key::Char('q') => break,
-                    Key::Char('u') => app.mark_selected_unread(),
-                    Key::Char('r') => app.mark_selected_read(),
+                    Key::Char('r') => app.toggle_selected_read(),
                     Key::Char('j') => app.scroll_items_down(),
                     Key::Char('k') => app.scroll_items_up(),
                     Key::Ctrl('d') => app.page_items_down(),
