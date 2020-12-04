@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             Event::Updated => {
                 app.status = Status::Idle;
-                app.load_items();
+                app.load_new_items();
             }
         }
     }

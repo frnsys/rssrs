@@ -5,6 +5,7 @@ use rusqlite::{params, Connection, Result};
 pub struct Item {
     pub read: bool,
     pub channel: String,
+    pub retrieved_at: i64,
     pub title: Option<String>,
     pub url: Option<String>,
     pub published_at: Option<i64>,
@@ -25,6 +26,7 @@ impl Database {
                       channel         TEXT,
                       title           TEXT,
                       published_at    INTEGER,
+                      retrieved_at    INTEGER,
                       description     TEXT
                       )",
             params![],
@@ -38,8 +40,8 @@ impl Database {
     pub fn add_item(&self, item: &Item) -> Result<()> {
         // Ignore unique constraint conflicts
         self.conn.execute(
-            "INSERT OR IGNORE INTO item (url, channel, title, published_at, description) VALUES (?, ?, ?, ?, ?)",
-            params![item.url, item.channel, item.title, item.published_at, item.description],
+            "INSERT OR IGNORE INTO item (url, channel, title, published_at, retrieved_at, description) VALUES (?, ?, ?, ?, ?, ?)",
+            params![item.url, item.channel, item.title, item.published_at, item.retrieved_at, item.description],
         )?;
         Ok(())
     }
@@ -61,7 +63,8 @@ impl Database {
                 channel: row.get(2)?,
                 title: row.get(3)?,
                 published_at: row.get(4)?,
-                description: row.get(5)?,
+                retrieved_at: row.get(5)?,
+                description: row.get(6)?,
             })
         })?.filter_map(Result::ok).collect();
         Ok(items)

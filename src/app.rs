@@ -1,5 +1,5 @@
 use webbrowser;
-use chrono::{TimeZone, Local};
+use chrono::{TimeZone, Local, DateTime, Utc};
 use super::db::{Database, Item};
 use super::util::{StatefulTable, load_feeds};
 use regex::{Regex, RegexBuilder};
@@ -29,6 +29,7 @@ pub struct App {
     pub focus_reader: bool,
     pub status: Status,
     pub input_mode: InputMode,
+    pub last_updated: i64,
 
     filter: Filter,
     pub items: Vec<Item>,
@@ -52,6 +53,7 @@ impl App {
             input_mode: InputMode::Normal,
             focus_reader: false,
             status: Status::Idle,
+            last_updated: 0,
 
             filter: Filter::Read(false),
             items: Vec::new(),
@@ -67,8 +69,8 @@ impl App {
         }
     }
 
-    pub fn load_items(&mut self) {
-        // Load items according to filter
+    // Load items according to filter
+    pub fn _load_items(&mut self) -> Vec<Item> {
         let all_feeds = load_feeds(&self.feeds_path);
         let feeds: Vec<(String, Vec<String>)> = match &self.filter {
             Filter::Tag(tag) => all_feeds.filter(|(_, tags)| tags.contains(&tag)).collect(),
@@ -77,21 +79,36 @@ impl App {
         };
 
         // TODO why do I need both flat map and flatten?
-        self.items = feeds.iter().flat_map(|(feed_url, _tags)| {
+        let mut items: Vec<Item> = feeds.iter().flat_map(|(feed_url, _tags)| {
                 self.db.get_channel_items(&feed_url).ok()
             }).flatten().collect();
 
         match &self.filter {
-            Filter::Read(read) => self.items.retain(|i| i.read == *read),
+            Filter::Read(read) => items.retain(|i| i.read == *read),
             _ => {}
         };
 
         // Most recent first
-        self.items.sort_by_cached_key(|i| match i.published_at {
+        items.sort_by_cached_key(|i| match i.published_at {
             Some(ts) => -ts,
             None => 0
         });
+        items
+    }
 
+    pub fn load_new_items(&mut self) {
+        let mut new: Vec<Item> = self._load_items().into_iter().filter(|item| item.retrieved_at > self.last_updated).collect();
+        self.items.append(&mut new);
+        self.last_updated = Utc::now().timestamp();
+        self.update_items_table();
+    }
+
+    pub fn load_items(&mut self) {
+        self.items = self._load_items();
+        self.update_items_table();
+    }
+
+    pub fn update_items_table(&mut self) {
         // Load item data into table
         self.table.set_items(self.items.iter().map(|i| {
             let pub_date = match i.published_at {
