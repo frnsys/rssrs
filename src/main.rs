@@ -41,6 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 InputMode::Normal => match input {
                     Key::Char('q') => break,
                     Key::Char('u') => app.mark_selected_unread(),
+                    Key::Char('r') => app.mark_selected_read(),
                     Key::Char('j') => app.scroll_items_down(),
                     Key::Char('k') => app.scroll_items_up(),
                     Key::Ctrl('d') => app.page_items_down(),
@@ -53,6 +54,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Key::Char('N') => app.jump_to_prev_result(),
                     Key::Char('f') => app.toggle_focus_reader(),
                     Key::Char('s') => app.toggle_selected_star(),
+                    Key::Char('R') => app.toggle_read_filter(),
+                    Key::Char('S') => app.toggle_starred_filter(),
                     Key::Char('/') => {
                         app.start_search();
                         events.disable_exit_key();

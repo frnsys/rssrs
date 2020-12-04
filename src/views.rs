@@ -21,6 +21,29 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
         InputMode::Normal => (
             vec![
                 Span::raw(update_str),
+                Span::raw(format!("[{}{}{}{}]", match app.filter.read {
+                    Some(b) => if b {
+                        "R"
+                    } else {
+                        "Я"
+                    },
+                    None => ""
+                }, match app.filter.starred {
+                    Some(b) => if b {
+                        "S"
+                    } else {
+                        "Ƨ"
+                    },
+                    None => ""
+                }, if app.filter.tags.len() == 0 {
+                    ""
+                } else {
+                    "T"
+                }, if app.filter.channels.len() == 0 {
+                    ""
+                } else {
+                    "C"
+                })),
                 Span::raw(format!("[{} unread] ", app.items.iter().filter(|i| !i.read).fold(0, |c, _| c + 1))),
             ],
             Style::default(),

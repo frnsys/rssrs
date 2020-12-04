@@ -5,13 +5,11 @@ Terminal RSS reader
 TODO:
 
 - view to select filter(s)
-    - F to change preview pane to filter selector
     - space to mark filters
-    - filter: read status (read/unread/all)
-    - filter: starred status (starred/unstarred/all)
     - filter: tag (0+)
+        - T to show tag selection
     - filter: channel (0+)
-- show channel/feed titles
+        - C to show channel selection
 - load config from file
     - keyword filters
     - update interval

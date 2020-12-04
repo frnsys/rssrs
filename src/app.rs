@@ -327,4 +327,34 @@ impl App {
             None => {}
         }
     }
+
+    pub fn toggle_read_filter(&mut self) {
+        // All => Unread => Read
+        self.filter.read = match self.filter.read {
+            Some(read) => {
+                if read {
+                    None
+                } else {
+                    Some(true)
+                }
+            },
+            None => Some(false)
+        };
+        self.load_items();
+    }
+
+    pub fn toggle_starred_filter(&mut self) {
+        // All => Starred => Unstarred
+        self.filter.starred = match self.filter.starred {
+            Some(starred) => {
+                if !starred {
+                    None
+                } else {
+                    Some(false)
+                }
+            },
+            None => Some(true)
+        };
+        self.load_items();
+    }
 }
