@@ -100,7 +100,6 @@ impl App {
             vec![
                 i.title.as_deref().unwrap_or("<no title>").to_string(),
                 pub_date,
-                i.channel.clone(),
             ]
         }).collect());
     }

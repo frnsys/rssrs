@@ -79,9 +79,18 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
         frame.render_widget(reader, chunks[0]);
         frame.render_widget(status_bar, chunks[1]);
     } else {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                 Constraint::Min(1),
+                 Constraint::Percentage(50),
+                 Constraint::Length(1),
+            ].as_ref())
+            .split(frame.size());
+
         // Item list
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-        let normal_style = Style::default().bg(Color::White);
+        let normal_style = Style::default();
         let header_cells = ["Title", "Published"]
             .iter()
             .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
@@ -129,25 +138,12 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
             .block(Block::default().borders(Borders::BOTTOM))
             .highlight_style(selected_style)
             .widths(&[
-                Constraint::Percentage(50),
-                Constraint::Length(30),
-                Constraint::Max(10),
+                Constraint::Min(1),
+                Constraint::Length(16),
             ]);
-
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                 Constraint::Min(1),
-                 Constraint::Percentage(50),
-                 Constraint::Length(1),
-            ].as_ref())
-            .split(frame.size());
 
         frame.render_stateful_widget(item_list, chunks[0], &mut app.table.state);
         frame.render_widget(reader, chunks[1]);
         frame.render_widget(status_bar, chunks[2]);
     }
 }
-
-// pub fn render_filters<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
-// }
