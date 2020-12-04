@@ -4,6 +4,7 @@ use rusqlite::{params, Connection, Result};
 #[derive(Debug)]
 pub struct Item {
     pub read: bool,
+    pub starred: bool,
     pub channel: String,
     pub retrieved_at: i64,
     pub title: Option<String>,
@@ -23,6 +24,7 @@ impl Database {
             "CREATE TABLE IF NOT EXISTS item (
                       url             TEXT PRIMARY KEY,
                       read            INTEGER DEFAULT 0,
+                      starred         INTEGER DEFAULT 0,
                       channel         TEXT,
                       title           TEXT,
                       published_at    INTEGER,
@@ -54,17 +56,26 @@ impl Database {
         Ok(())
     }
 
+    pub fn set_item_starred(&self, item: &Item, starred: bool) -> Result<()> {
+        self.conn.execute(
+            "UPDATE item SET starred=? WHERE url == ?",
+            params![starred, item.url],
+        )?;
+        Ok(())
+    }
+
     pub fn get_channel_items(&self, channel: &str) -> Result<Vec<Item>> {
         let mut stmt = self.conn.prepare("SELECT * FROM item WHERE channel == ?")?;
         let items = stmt.query_map(&[channel], |row| {
             Ok(Item {
                 url: row.get(0)?,
                 read: row.get(1)?,
-                channel: row.get(2)?,
-                title: row.get(3)?,
-                published_at: row.get(4)?,
-                retrieved_at: row.get(5)?,
-                description: row.get(6)?,
+                starred: row.get(2)?,
+                channel: row.get(3)?,
+                title: row.get(4)?,
+                published_at: row.get(5)?,
+                retrieved_at: row.get(6)?,
+                description: row.get(7)?,
             })
         })?.filter_map(Result::ok).collect();
         Ok(items)

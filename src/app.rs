@@ -12,6 +12,7 @@ pub enum InputMode {
 pub enum Filter {
     All,
     Read(bool),
+    Starred(bool),
     Channel(String),
     Keyword(String),
     Tag(String)
@@ -290,6 +291,16 @@ impl App {
                 } else {
                     self.marked.push(i);
                 }
+            },
+            None => {}
+        }
+    }
+
+    pub fn toggle_selected_star(&mut self) {
+        match self.table.state.selected() {
+            Some(i) => {
+                self.items[i].starred = !self.items[i].starred;
+                self.db.set_item_read(&self.items[i], self.items[i].starred);
             },
             None => {}
         }

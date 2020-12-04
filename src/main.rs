@@ -52,6 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Key::Char('n') => app.jump_to_next_result(),
                     Key::Char('N') => app.jump_to_prev_result(),
                     Key::Char('f') => app.toggle_focus_reader(),
+                    Key::Char('s') => app.toggle_selected_star(),
                     Key::Char('/') => {
                         app.start_search();
                         events.disable_exit_key();

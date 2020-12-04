@@ -11,6 +11,7 @@ pub fn update(channel_url: &str, db: &Database) -> Result<()> {
     for it in channel.items() {
         let item = Item {
             read: false,
+            starred: false,
             channel: channel_url.to_string(),
             title: it.title().map(Into::into),
             url: it.link().map(Into::into),

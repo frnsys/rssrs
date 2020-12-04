@@ -136,6 +136,9 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
             if app.marked.contains(&i) {
                 style = style.bg(Color::DarkGray);
             }
+            if app.items[i].starred {
+                style = style.add_modifier(Modifier::BOLD).fg(Color::Yellow);
+            }
 
             Row::new(cells).height(height as u16).style(style)
         });
