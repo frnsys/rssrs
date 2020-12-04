@@ -144,7 +144,7 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
             .block(Block::default().borders(Borders::BOTTOM))
             .highlight_style(selected_style)
             .widths(&[
-                Constraint::Min(1),
+                Constraint::Percentage(70),
                 Constraint::Length(16),
             ]);
 
