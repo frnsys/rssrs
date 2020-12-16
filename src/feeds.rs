@@ -8,6 +8,8 @@ use rusqlite::Result;
 use html2md::parse_html;
 use super::db::{Database, Item};
 
+const MAX_AGE: i64 = 60*60*24*182; // about 6 months
+
 pub struct Feed {
     pub url: String,
     pub title: String,
@@ -60,7 +62,13 @@ pub fn update(feed_url: &str, db: &Database) -> Result<()> {
                         None => None
                     },
                 };
-                db.add_item(&item)?
+
+                // Only save items above a certain age
+                if let Some(published) = item.published_at {
+                    if published > now - MAX_AGE {
+                        db.add_item(&item)?
+                    }
+                }
             }
         },
         Err(e) => {} // TODO bubble message up to status bar
