@@ -80,4 +80,12 @@ impl Database {
         })?.filter_map(Result::ok).collect();
         Ok(items)
     }
+
+    pub fn last_update(&self) -> Result<i64> {
+        self.conn.query_row(
+            "SELECT max(retrieved_at) FROM item",
+            params![],
+            |row| row.get(0)
+        )
+    }
 }

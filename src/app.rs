@@ -126,19 +126,26 @@ impl App {
             None => 0
         });
 
-
         items
     }
 
     pub fn load_new_items(&mut self) {
         let mut new: Vec<Item> = self._load_items().into_iter().filter(|item| item.retrieved_at > self.last_updated).collect();
-        self.items.append(&mut new);
         self.last_updated = Utc::now().timestamp();
+
+        // Add and sort recent first
+        self.items.append(&mut new);
+        self.items.sort_by_cached_key(|i| match i.published_at {
+            Some(ts) => -ts,
+            None => 0
+        });
+
         self.update_items_table();
     }
 
     pub fn load_items(&mut self) {
         self.items = self._load_items();
+        self.last_updated = self.db.last_update().unwrap();
         self.update_items_table();
     }
 
