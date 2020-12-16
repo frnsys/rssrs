@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
     terminal.clear()?;
 
-    let mut events = Events::with_config(config.clone());
+    let mut events = Events::with_config(config);
 
     terminal.clear()?;
     loop {

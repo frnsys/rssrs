@@ -1,4 +1,3 @@
-use webbrowser;
 use std::path::{Path, PathBuf};
 use chrono::{TimeZone, Local, Utc};
 use super::db::{Database, Item};
@@ -34,8 +33,8 @@ impl Default for Filter {
 
 impl Filter {
     pub fn filter_feed(&self, feed: &Feed) -> bool {
-        (self.feeds.len() == 0 || self.feeds.contains(&feed.url))
-            && (self.tags.len() == 0 || self.tags.iter().any(|tag| feed.tags.contains(tag)))
+        (self.feeds.is_empty() || self.feeds.contains(&feed.url))
+            && (self.tags.is_empty() || self.tags.iter().any(|tag| feed.tags.contains(tag)))
     }
 
     pub fn filter_item(&self, item: &Item) -> bool {
@@ -45,7 +44,7 @@ impl Filter {
         }) && (match self.starred {
             Some(starred) => item.starred == starred,
             None => true
-        }) && (self.keywords.len() == 0 || self.keywords.iter().any(|kw| match &item.title {
+        }) && (self.keywords.is_empty() || self.keywords.iter().any(|kw| match &item.title {
             Some(title) => title.contains(kw),
             None => false
         }))
@@ -165,32 +164,23 @@ impl App {
     }
 
     pub fn mark_selected_read(&mut self) {
-        match self.table.state.selected() {
-            Some(i) => {
-                self.items[i].read = true;
-                self.db.set_item_read(&self.items[i], true);
-            },
-            None => {}
+        if let Some(i) = self.table.state.selected() {
+            self.items[i].read = true;
+            self.db.set_item_read(&self.items[i], true);
         }
     }
 
     pub fn mark_selected_unread(&mut self) {
-        match self.table.state.selected() {
-            Some(i) => {
-                self.items[i].read = false;
-                self.db.set_item_read(&self.items[i], false);
-            },
-            None => {}
+        if let Some(i) = self.table.state.selected() {
+            self.items[i].read = false;
+            self.db.set_item_read(&self.items[i], false);
         }
     }
 
     pub fn toggle_selected_read(&mut self) {
-        match self.table.state.selected() {
-            Some(i) => {
-                self.items[i].read = !self.items[i].read;
-                self.db.set_item_read(&self.items[i], self.items[i].read);
-            },
-            None => {}
+        if let Some(i) = self.table.state.selected() {
+            self.items[i].read = !self.items[i].read;
+            self.db.set_item_read(&self.items[i], self.items[i].read);
         }
     }
 
@@ -260,32 +250,23 @@ impl App {
     }
 
     pub fn open_selected(&self) {
-        match self.table.state.selected() {
-            Some(i) => {
-                match &self.items[i].url {
-                    Some(url) => {
-                        webbrowser::open(&url);
-                    },
-                    None => {}
-                }
-            },
-            None => {}
+        if let Some(i) = self.table.state.selected() {
+            if let Some(url) = &self.items[i].url {
+                webbrowser::open(&url);
+            }
         };
     }
 
     pub fn open_marked(&self) {
         for i in &self.marked {
-            match &self.items[*i].url {
-                Some(url) => {
-                    webbrowser::open(&url);
-                },
-                None => {}
+            if let Some(url) = &self.items[*i].url {
+                webbrowser::open(&url);
             }
         }
     }
 
     pub fn jump_to_next_result(&mut self) {
-        if self.search_results.len() > 0 {
+        if !self.search_results.is_empty() {
             match self.table.state.selected() {
                 Some(i) => {
                     if i >= *self.search_results.last().unwrap() {
@@ -307,7 +288,7 @@ impl App {
     }
 
     pub fn jump_to_prev_result(&mut self) {
-        if self.search_results.len() > 0 {
+        if !self.search_results.is_empty() {
             match self.table.state.selected() {
                 Some(i) => {
                     if i <= self.search_results[0] {
@@ -334,25 +315,19 @@ impl App {
     }
 
     pub fn toggle_selected_mark(&mut self) {
-        match self.table.state.selected() {
-            Some(i) => {
-                if self.marked.contains(&i) {
-                    self.marked.retain(|i_| i_ != &i);
-                } else {
-                    self.marked.push(i);
-                }
-            },
-            None => {}
+        if let Some(i) = self.table.state.selected() {
+            if self.marked.contains(&i) {
+                self.marked.retain(|i_| i_ != &i);
+            } else {
+                self.marked.push(i);
+            }
         }
     }
 
     pub fn toggle_selected_star(&mut self) {
-        match self.table.state.selected() {
-            Some(i) => {
-                self.items[i].starred = !self.items[i].starred;
-                self.db.set_item_starred(&self.items[i], self.items[i].starred);
-            },
-            None => {}
+        if let Some(i) = self.table.state.selected() {
+            self.items[i].starred = !self.items[i].starred;
+            self.db.set_item_starred(&self.items[i], self.items[i].starred);
         }
     }
 

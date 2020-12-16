@@ -25,21 +25,21 @@ pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {
                     Some(b) => if b {
                         "R"
                     } else {
-                        "Я"
+                        "r"
                     },
                     None => ""
                 }, match app.filter.starred {
                     Some(b) => if b {
                         "S"
                     } else {
-                        "Ƨ"
+                        "s"
                     },
                     None => ""
-                }, if app.filter.tags.len() == 0 {
+                }, if app.filter.tags.is_empty() {
                     ""
                 } else {
                     "T"
-                }, if app.filter.feeds.len() == 0 {
+                }, if app.filter.feeds.is_empty() {
                     ""
                 } else {
                     "C"

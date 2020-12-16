@@ -28,12 +28,8 @@ pub fn load_feeds<P>(path: P) -> impl Iterator<Item=Feed> where P: AsRef<Path> {
             let mut split = line.splitn(3, '|');
             let url = split.next().unwrap().to_string();
             let title = split.next().unwrap().to_string();
-            let tags = split.next().unwrap_or("").split(",").map(|s| s.to_string()).collect();
-            Feed {
-                url: url,
-                title: title,
-                tags: tags
-            }
+            let tags = split.next().unwrap_or("").split(',').map(|s| s.to_string()).collect();
+            Feed { url, title, tags }
         })
 }
 

@@ -35,7 +35,7 @@ impl Database {
         ).unwrap();
 
         Database {
-            conn: conn
+            conn
         }
     }
 
