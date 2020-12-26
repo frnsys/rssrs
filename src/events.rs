@@ -58,7 +58,7 @@ impl Events {
             })
         };
 
-        let update_rate = Duration::from_secs(config.update_rate);
+        let update_interval = Duration::from_secs(config.update_interval);
         let update_handle = {
             thread::spawn(move || {
                 let mut runtime = Runtime::new().unwrap();
@@ -87,7 +87,7 @@ impl Events {
                             }
                         }
                     });
-                    thread::sleep(update_rate);
+                    thread::sleep(update_interval);
                 }
             })
         };

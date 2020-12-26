@@ -11,17 +11,19 @@ pub struct Config {
     pub db_path: PathBuf,
     pub feeds_path: PathBuf,
 
-    #[serde(default)]
-    pub update_rate: u64,
+    #[serde(default = "default_update_interval")]
+    pub update_interval: u64,
 
     #[serde(default)]
     pub keywords: Vec<String>
 }
 
+fn default_update_interval() -> u64 { 1200 }
+
 impl Default for Config {
     fn default() -> Config {
         Config {
-            update_rate: 1200,
+            update_interval: 1200,
             db_path: config_path("rssrs.db"),
             feeds_path: config_path("feeds.txt"),
             keywords: Vec::new()
