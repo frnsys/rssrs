@@ -10,7 +10,12 @@ use std::error::Error;
 pub struct Config {
     pub db_path: PathBuf,
     pub feeds_path: PathBuf,
+
+    #[serde(default)]
     pub update_rate: u64,
+
+    #[serde(default)]
+    pub keywords: Vec<String>
 }
 
 impl Default for Config {
@@ -18,7 +23,8 @@ impl Default for Config {
         Config {
             update_rate: 1200,
             db_path: config_path("rssrs.db"),
-            feeds_path: config_path("feeds.txt")
+            feeds_path: config_path("feeds.txt"),
+            keywords: Vec::new()
         }
     }
 }

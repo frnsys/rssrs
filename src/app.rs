@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use chrono::{TimeZone, Local, Utc};
 use super::db::{Database, Item};
 use super::util::{StatefulTable};
-use super::feeds::{Feed, load_feeds};
+use super::feed::{Feed, load_feeds};
 use std::collections::HashMap;
 use regex::{Regex, RegexBuilder};
 
@@ -166,25 +166,18 @@ impl App {
     pub fn mark_selected_read(&mut self) {
         if let Some(i) = self.table.state.selected() {
             self.items[i].read = true;
-            self.db.set_item_read(&self.items[i], true);
-        }
-    }
-
-    pub fn mark_selected_unread(&mut self) {
-        if let Some(i) = self.table.state.selected() {
-            self.items[i].read = false;
-            self.db.set_item_read(&self.items[i], false);
+            self.db.set_item_read(&self.items[i], true).unwrap();
         }
     }
 
     pub fn toggle_selected_read(&mut self) {
         if let Some(i) = self.table.state.selected() {
             self.items[i].read = !self.items[i].read;
-            self.db.set_item_read(&self.items[i], self.items[i].read);
+            self.db.set_item_read(&self.items[i], self.items[i].read).unwrap();
         }
     }
 
-    pub fn build_query(&self, query: &String) -> Regex {
+    pub fn build_query(&self, query: &str) -> Regex {
         let regex = format!(r"({})", query);
         RegexBuilder::new(&regex).case_insensitive(true).build().expect("Invalid regex")
     }
@@ -252,7 +245,7 @@ impl App {
     pub fn open_selected(&self) {
         if let Some(i) = self.table.state.selected() {
             if let Some(url) = &self.items[i].url {
-                webbrowser::open(&url);
+                webbrowser::open(&url).unwrap();
             }
         };
     }
@@ -260,7 +253,7 @@ impl App {
     pub fn open_marked(&self) {
         for i in &self.marked {
             if let Some(url) = &self.items[*i].url {
-                webbrowser::open(&url);
+                webbrowser::open(&url).unwrap();
             }
         }
     }
@@ -327,7 +320,7 @@ impl App {
     pub fn toggle_selected_star(&mut self) {
         if let Some(i) = self.table.state.selected() {
             self.items[i].starred = !self.items[i].starred;
-            self.db.set_item_starred(&self.items[i], self.items[i].starred);
+            self.db.set_item_starred(&self.items[i], self.items[i].starred).unwrap();
         }
     }
 

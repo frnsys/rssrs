@@ -2,8 +2,8 @@ mod db;
 mod app;
 mod util;
 mod conf;
-mod feeds;
-mod views;
+mod feed;
+mod view;
 mod events;
 
 use std::{io, error::Error};
@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     terminal.clear()?;
     loop {
         terminal.draw(|mut f| {
-            views::render_browser(&mut app, &mut f);
+            view::render_browser(&mut app, &mut f);
         })?;
 
         match events.next()? {
@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 },
                 InputMode::Search => match input {
                     Key::Char('\n') => {
-                        let search_query = app.search_input_raw.drain(..).collect();
+                        let search_query: String = app.search_input_raw.drain(..).collect();
                         let search_query = app.build_query(&search_query);
                         app.execute_search(&search_query);
                         app.search_query = Some(search_query);

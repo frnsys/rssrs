@@ -35,7 +35,7 @@ pub fn load_feeds<P>(path: P) -> impl Iterator<Item=Feed> where P: AsRef<Path> {
 }
 
 
-pub async fn get_updates(feed_url: String) -> Result<Vec<Item>, Box<dyn Error>> {
+pub async fn get_items(feed_url: String) -> Result<Vec<Item>, Box<dyn Error>> {
     let content = reqwest::get(&feed_url)
         .await?
         .bytes()

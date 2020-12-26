@@ -12,7 +12,7 @@ use termion::input::TermRead;
 
 use super::db::Database;
 use super::conf::Config;
-use super::feeds::{load_feeds, get_updates};
+use super::feed::{load_feeds, get_items};
 use tokio::runtime::Runtime;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -69,7 +69,7 @@ impl Events {
                     }
                     let feeds_path = config.feeds_path.clone();
                     let mut futs: FuturesUnordered<_> = load_feeds(&feeds_path)
-                        .map(|feed| get_updates(feed.url)).collect();
+                        .map(|feed| get_items(feed.url)).collect();
                     runtime.block_on(async {
                         while let Some(result) = futs.next().await {
                             match result {
