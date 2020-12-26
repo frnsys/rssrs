@@ -1,5 +1,5 @@
 use super::app::{App, InputMode, Status};
-use super::util::split_keep;
+use regex::Regex;
 use chrono::{TimeZone, Local};
 use tui::{
     terminal::Frame,
@@ -9,6 +9,26 @@ use tui::{
     layout::{Constraint, Direction, Layout, Alignment},
     widgets::{Block, Borders, Cell, Row, Table, Paragraph, Wrap},
 };
+
+// Split a string on a regex, keeping the matching parts
+// and marking which parts are the matched ones
+pub fn split_keep<'a>(r: &Regex, text: &'a str) -> Vec<(&'a str, bool)> {
+    let mut result = Vec::new();
+    let mut last = 0;
+    for mat in r.find_iter(text) {
+        let index = mat.start();
+        let matched = mat.as_str();
+        if last != index {
+            result.push((&text[last..index], false));
+        }
+        result.push((matched, true));
+        last = index + matched.len();
+    }
+    if last < text.len() {
+        result.push((&text[last..], false));
+    }
+    result
+}
 
 
 pub fn render_browser<B>(app: &mut App, frame: &mut Frame<B>) where B: Backend {

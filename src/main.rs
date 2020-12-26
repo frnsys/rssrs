@@ -1,6 +1,5 @@
 mod db;
 mod app;
-mod util;
 mod conf;
 mod feed;
 mod view;
