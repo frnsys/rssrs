@@ -12,6 +12,5 @@ TODO:
         - C to show channel selection
 - load config from file
     - keyword filters
-    - update interval
 
 ![](shot.png)

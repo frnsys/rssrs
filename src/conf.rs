@@ -3,6 +3,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use std::io::prelude::*;
+use std::error::Error;
 
 
 #[derive(Debug, Clone, Deserialize)]
@@ -23,15 +24,15 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn load() -> Config {
+    pub fn load() -> Result<Config, Box<dyn Error>> {
         let path = config_path("config.toml");
         if path.exists() {
-            let mut file = File::open(path).expect("Couldn't open config");
             let mut content = String::new();
-            file.read_to_string(&mut content).expect("Error reading config");
-            toml::from_str(&content).expect("Error while parsing config toml")
+            File::open(path)?.read_to_string(&mut content)?;
+            let config: Config = toml::from_str(&content)?;
+            Ok(config)
         } else {
-            Config::default()
+            Ok(Config::default())
         }
     }
 }
