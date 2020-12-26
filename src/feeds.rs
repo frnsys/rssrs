@@ -6,7 +6,8 @@ use std::io::prelude::*;
 use chrono::{DateTime, Utc};
 use rusqlite::Result;
 use html2md::parse_html;
-use super::db::{Database, Item};
+use super::db::Item;
+use std::error::Error;
 
 const MAX_AGE: i64 = 60*60*24*182; // about 6 months
 
@@ -34,41 +35,41 @@ pub fn load_feeds<P>(path: P) -> impl Iterator<Item=Feed> where P: AsRef<Path> {
 }
 
 
-pub fn update(feed_url: &str, db: &Database) -> Result<()> {
-    match Channel::from_url(feed_url) {
-        Ok(feed) => {
-            let now = Utc::now().timestamp();
-            for it in feed.items() {
-                let item = Item {
-                    read: false,
-                    starred: false,
-                    feed: feed_url.to_string(),
-                    title: it.title().map(Into::into),
-                    url: it.link().map(Into::into),
-                    retrieved_at: now,
-                    published_at: match it.pub_date().map(Into::into) {
-                        Some(pub_date) => {
-                            let dt = DateTime::parse_from_rfc2822(pub_date).unwrap();
-                            Some(dt.timestamp())
-                        },
-                        None => None
-                    },
-                    description: match it.description().map(Into::into) {
-                        Some(desc) => Some(parse_html(desc)),
-                        None => None
-                    },
-                };
+pub async fn get_updates(feed_url: String) -> Result<Vec<Item>, Box<dyn Error>> {
+    let content = reqwest::get(&feed_url)
+        .await?
+        .bytes()
+        .await?;
+    let feed = Channel::read_from(&content[..])?;
+    let now = Utc::now().timestamp();
+    let mut items = Vec::new();
+    for it in feed.items() {
+        let item = Item {
+            read: false,
+            starred: false,
+            feed: feed_url.clone(),
+            title: it.title().map(Into::into),
+            url: it.link().map(Into::into),
+            retrieved_at: now,
+            published_at: match it.pub_date().map(Into::into) {
+                Some(pub_date) => {
+                    let dt = DateTime::parse_from_rfc2822(pub_date).unwrap();
+                    Some(dt.timestamp())
+                },
+                None => None
+            },
+            description: match it.description().map(Into::into) {
+                Some(desc) => Some(parse_html(desc)),
+                None => None
+            },
+        };
 
-                // Only save items above a certain age
-                if let Some(published) = item.published_at {
-                    if published > now - MAX_AGE {
-                        db.add_item(&item)?
-                    }
-                }
+        // Only save items above a certain age
+        if let Some(published) = item.published_at {
+            if published > now - MAX_AGE {
+                items.push(item);
             }
-        },
-        Err(e) => {} // TODO bubble message up to status bar
+        }
     }
-    // let title = feed.title();
-    Ok(())
+    Ok(items)
 }

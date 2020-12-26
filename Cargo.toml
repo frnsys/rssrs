@@ -19,3 +19,6 @@ regex = "1.4.2"
 chrono = "0.4.19"
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
+reqwest = "0.10.10"
+tokio = {version = "0.2", features = ["full"] }
+futures = "0.3.8"

@@ -12,7 +12,10 @@ use termion::input::TermRead;
 
 use super::db::Database;
 use super::conf::Config;
-use super::feeds::{load_feeds, update};
+use super::feeds::{load_feeds, get_updates};
+use tokio::runtime::Runtime;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 
 
 pub enum Event<I> {
@@ -57,18 +60,35 @@ impl Events {
 
         let update_rate = Duration::from_secs(config.update_rate);
         let update_handle = {
-            thread::spawn(move || loop {
+            thread::spawn(move || {
+                let mut runtime = Runtime::new().unwrap();
                 let db = Database::new(&config.db_path);
-                for feed in load_feeds(&config.feeds_path) {
+                loop {
                     if tx.send(Event::Updating).is_err() {
                         break;
                     }
-                    update(&feed.url, &db).unwrap();
-                    if tx.send(Event::Updated).is_err() {
-                        break;
-                    }
+                    let feeds_path = config.feeds_path.clone();
+                    let mut futs: FuturesUnordered<_> = load_feeds(&feeds_path)
+                        .map(|feed| get_updates(feed.url)).collect();
+                    runtime.block_on(async {
+                        while let Some(result) = futs.next().await {
+                            match result {
+                                Ok(items) => {
+                                    for item in items {
+                                        db.add_item(&item).unwrap();
+                                    }
+                                    if tx.send(Event::Updated).is_err() {
+                                        break;
+                                    }
+                                },
+                                Err(_) => {
+                                    // TODO
+                                }
+                            }
+                        }
+                    });
+                    thread::sleep(update_rate);
                 }
-                thread::sleep(update_rate);
             })
         };
         Events {
