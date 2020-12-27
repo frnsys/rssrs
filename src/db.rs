@@ -1,4 +1,5 @@
 use rusqlite::{params, Connection, Result};
+use std::fs::{create_dir_all, File};
 use std::path::Path;
 
 #[derive(Debug)]
@@ -22,6 +23,11 @@ impl Database {
     where
         P: AsRef<Path>,
     {
+        let path_buf = path.as_ref().to_path_buf();
+        if !path_buf.exists() {
+            create_dir_all(path_buf.parent().unwrap()).unwrap();
+            File::create(&path).unwrap();
+        }
         let conn = Connection::open(path).unwrap();
         conn.execute(
             "CREATE TABLE IF NOT EXISTS item (
