@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
-use chrono::{TimeZone, Local, Utc};
 use super::db::{Database, Item};
-use super::feed::{Feed, load_feeds};
-use std::collections::HashMap;
-use tui::widgets::TableState;
+use super::feed::{load_feeds, Feed};
+use chrono::{Local, TimeZone, Utc};
 use regex::{Regex, RegexBuilder};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use tui::widgets::TableState;
 
 pub enum InputMode {
     Normal,
@@ -26,7 +26,7 @@ impl Default for Filter {
             starred: None,
             feeds: vec![],
             keywords: vec![],
-            tags: vec![]
+            tags: vec![],
         }
     }
 }
@@ -40,20 +40,21 @@ impl Filter {
     pub fn filter_item(&self, item: &Item) -> bool {
         (match self.read {
             Some(read) => item.read == read,
-            None => true
+            None => true,
         }) && (match self.starred {
             Some(starred) => item.starred == starred,
-            None => true
-        }) && (self.keywords.is_empty() || self.keywords.iter().any(|kw| match &item.title {
-            Some(title) => title.contains(kw),
-            None => false
-        }))
+            None => true,
+        }) && (self.keywords.is_empty()
+            || self.keywords.iter().any(|kw| match &item.title {
+                Some(title) => title.contains(kw),
+                None => false,
+            }))
     }
 }
 
 pub enum Status {
     Idle,
-    Updating
+    Updating,
 }
 
 pub struct App {
@@ -80,7 +81,10 @@ pub struct App {
 }
 
 impl App {
-    pub fn new<P>(db_path: P, feeds_path: P) -> App where P: AsRef<Path> {
+    pub fn new<P>(db_path: P, feeds_path: P) -> App
+    where
+        P: AsRef<Path>,
+    {
         App {
             db: Database::new(db_path),
             feeds_path: feeds_path.as_ref().to_path_buf(),
@@ -115,28 +119,34 @@ impl App {
         let feeds = load_feeds(&self.feeds_path).filter(|f| self.filter.filter_feed(f));
 
         // TODO why do I need both flat map and flatten?
-        let mut items: Vec<Item> = feeds.flat_map(|feed| {
-                self.db.get_feed_items(&feed.url).ok()
-            }).flatten().filter(|i| self.filter.filter_item(i)).collect();
+        let mut items: Vec<Item> = feeds
+            .flat_map(|feed| self.db.get_feed_items(&feed.url).ok())
+            .flatten()
+            .filter(|i| self.filter.filter_item(i))
+            .collect();
 
         // Most recent first
         items.sort_by_cached_key(|i| match i.published_at {
             Some(ts) => -ts,
-            None => 0
+            None => 0,
         });
 
         items
     }
 
     pub fn load_new_items(&mut self) {
-        let mut new: Vec<Item> = self._load_items().into_iter().filter(|item| item.retrieved_at > self.last_updated).collect();
+        let mut new: Vec<Item> = self
+            ._load_items()
+            .into_iter()
+            .filter(|item| item.retrieved_at > self.last_updated)
+            .collect();
         self.last_updated = Utc::now().timestamp();
 
         // Add and sort recent first
         self.items.append(&mut new);
         self.items.sort_by_cached_key(|i| match i.published_at {
             Some(ts) => -ts,
-            None => 0
+            None => 0,
         });
 
         self.update_items_table();
@@ -144,23 +154,31 @@ impl App {
 
     pub fn load_items(&mut self) {
         self.items = self._load_items();
-        self.last_updated = self.db.last_update().unwrap();
+        self.last_updated = match self.db.last_update() {
+            Ok(time) => time,
+            Err(_) => Utc::now().timestamp(),
+        };
         self.update_items_table();
     }
 
     pub fn update_items_table(&mut self) {
         // Load item data into table
-        self.table.set_items(self.items.iter().map(|i| {
-            let pub_date = match i.published_at {
-                Some(ts) => Local.timestamp(ts, 0).format("%m/%d/%y %H:%M").to_string(),
-                None => "<no pub date>".to_string()
-            };
+        self.table.set_items(
+            self.items
+                .iter()
+                .map(|i| {
+                    let pub_date = match i.published_at {
+                        Some(ts) => Local.timestamp(ts, 0).format("%m/%d/%y %H:%M").to_string(),
+                        None => "<no pub date>".to_string(),
+                    };
 
-            vec![
-                i.title.as_deref().unwrap_or("<no title>").to_string(),
-                pub_date,
-            ]
-        }).collect());
+                    vec![
+                        i.title.as_deref().unwrap_or("<no title>").to_string(),
+                        pub_date,
+                    ]
+                })
+                .collect(),
+        );
     }
 
     pub fn mark_selected_read(&mut self) {
@@ -173,22 +191,31 @@ impl App {
     pub fn toggle_selected_read(&mut self) {
         if let Some(i) = self.table.state.selected() {
             self.items[i].read = !self.items[i].read;
-            self.db.set_item_read(&self.items[i], self.items[i].read).unwrap();
+            self.db
+                .set_item_read(&self.items[i], self.items[i].read)
+                .unwrap();
         }
     }
 
     pub fn build_query(&self, query: &str) -> Regex {
         let regex = format!(r"({})", query);
-        RegexBuilder::new(&regex).case_insensitive(true).build().expect("Invalid regex")
+        RegexBuilder::new(&regex)
+            .case_insensitive(true)
+            .build()
+            .expect("Invalid regex")
     }
 
     pub fn execute_search(&mut self, query: &Regex) {
-        self.search_results = self.items.iter().enumerate().filter(|(_, item)| {
-            match &item.title {
+        self.search_results = self
+            .items
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| match &item.title {
                 Some(title) => query.is_match(title),
-                None => false
-            }
-        }).map(|i| i.0).collect();
+                None => false,
+            })
+            .map(|i| i.0)
+            .collect();
     }
 
     pub fn start_search(&mut self) {
@@ -272,7 +299,7 @@ impl App {
                             }
                         }
                     }
-                },
+                }
                 None => {
                     self.table.state.select(Some(self.search_results[0]));
                 }
@@ -295,7 +322,7 @@ impl App {
                             }
                         }
                     }
-                },
+                }
                 None => {
                     self.table.state.select(Some(self.search_results[0]));
                 }
@@ -320,7 +347,9 @@ impl App {
     pub fn toggle_selected_star(&mut self) {
         if let Some(i) = self.table.state.selected() {
             self.items[i].starred = !self.items[i].starred;
-            self.db.set_item_starred(&self.items[i], self.items[i].starred).unwrap();
+            self.db
+                .set_item_starred(&self.items[i], self.items[i].starred)
+                .unwrap();
         }
     }
 
@@ -333,8 +362,8 @@ impl App {
                 } else {
                     Some(true)
                 }
-            },
-            None => Some(false)
+            }
+            None => Some(false),
         };
         self.load_items();
     }
@@ -348,13 +377,12 @@ impl App {
                 } else {
                     Some(false)
                 }
-            },
-            None => Some(true)
+            }
+            None => Some(true),
         };
         self.load_items();
     }
 }
-
 
 // https://github.com/fdehau/tui-rs/blob/master/examples/table.rs
 pub struct StatefulTable {
@@ -386,9 +414,7 @@ impl StatefulTable {
 
     pub fn jump_forward(&mut self, n: usize) {
         let i = match self.state.selected() {
-            Some(i) => {
-                usize::min(i + n, self.items.len() - 1)
-            }
+            Some(i) => usize::min(i + n, self.items.len() - 1),
             None => 0,
         };
         self.state.select(Some(i));
@@ -426,5 +452,3 @@ impl StatefulTable {
         self.items = items;
     }
 }
-
-

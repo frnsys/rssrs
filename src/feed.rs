@@ -22,7 +22,10 @@ pub struct Feed {
  * <url> <comma-delimited tags>
  */
 pub fn load_feeds<P>(path: P) -> impl Iterator<Item=Feed> where P: AsRef<Path> {
-    let file = File::open(&path).unwrap();
+    let file = File::open(&path).unwrap_or_else(|_| {
+        File::create(&path).unwrap();
+        File::open(&path).unwrap()
+    });
 
     BufReader::new(file).lines().filter_map(Result::ok)
         .filter(|line| !line.starts_with('#')).map(|line| {

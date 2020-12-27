@@ -2,7 +2,13 @@
 
 Terminal RSS reader
 
-TODO:
+## feeds.txt
+Each feed is a `url`, `title`, and list comma-separated `tags`, separated by `|`s, e.g:
+```
+https://hnrss.org/frontpage | Hacker News | tech,news
+```
+
+## TODO
 
 - view to select filter(s)
     - space to mark filters
