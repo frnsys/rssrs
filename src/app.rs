@@ -154,7 +154,10 @@ impl App {
 
     pub fn load_items(&mut self) {
         self.items = self._load_items();
-        self.last_updated = self.db.last_update().unwrap();
+        self.last_updated = match self.db.last_update() {
+            Ok(time) => time,
+            Err(_) => Utc::now().timestamp(),
+        };
         self.update_items_table();
     }
 
